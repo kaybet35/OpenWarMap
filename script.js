@@ -294,9 +294,10 @@ function handleMapPointer(event) {
     return;
   }
 
-  const rect = els.detailCanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  const canvasRect = els.detailCanvas.getBoundingClientRect();
+  const viewportRect = els.detailCanvas.parentElement.getBoundingClientRect();
+  const x = event.clientX - canvasRect.left;
+  const y = event.clientY - canvasRect.top;
 
   const hit = [...state.markerHitboxes]
     .reverse()
@@ -320,8 +321,8 @@ function handleMapPointer(event) {
   `;
 
   els.mapTooltip.classList.remove("hidden");
-  els.mapTooltip.style.left = `${x + 14}px`;
-  els.mapTooltip.style.top = `${y + 14}px`;
+  els.mapTooltip.style.left = `${event.clientX - viewportRect.left + 14}px`;
+  els.mapTooltip.style.top = `${event.clientY - viewportRect.top + 14}px`;
 }
 
 function prettyMapName(mapName) {
