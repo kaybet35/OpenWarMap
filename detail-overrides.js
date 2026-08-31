@@ -9,8 +9,13 @@ const DETAIL_MAP_WIDTH = 1024;
 const DETAIL_MAP_HEIGHT = 888;
 
 openRegion = async function(mapName) {
+  clearInterval(state.regionTimer);
+  state.regionTimer = null;
   state.selectedMap = mapName;
+  state.regionImage = null;
+  state.markerHitboxes = [];
 
+  resetDetailView();
   els.detailPanel.classList.remove("hidden");
   els.detailTitle.textContent = prettyMapName(mapName);
   els.detailSubtitle.textContent = mapName;
@@ -21,6 +26,7 @@ openRegion = async function(mapName) {
 
   try {
     const tasks = [];
+    let loadedRegionImage = null;
 
     if (!state.static.has(mapName)) {
       tasks.push(
@@ -38,30 +44,65 @@ openRegion = async function(mapName) {
       apiFetch(`/worldconquest/warReport/${encodeURIComponent(mapName)}`)
         .then(data => {
           state.reports.set(mapName, data);
-          updateDetailStats(data);
+          if (state.selectedMap === mapName) {
+            updateDetailStats(data);
+          }
         })
     );
 
     tasks.push(
       loadLocalRegionImage(mapName)
         .then(image => {
-          state.regionImage = image;
+          loadedRegionImage = image;
         })
     );
 
     await Promise.all(tasks);
+    if (state.selectedMap !== mapName) {
+      return;
+    }
+
+    state.regionImage = loadedRegionImage;
     await preloadVisibleIcons(mapName);
+    if (state.selectedMap !== mapName) {
+      return;
+    }
+
     refreshDetailIconLayerMenu(mapName);
-
-    els.detailLoading.style.display = "none";
     drawRegion();
+    els.detailCanvas.style.visibility = "visible";
+    els.detailLoading.style.display = "none";
 
-    clearInterval(state.regionTimer);
     state.regionTimer = setInterval(refreshSelectedRegion, 15000);
   } catch (error) {
+    if (state.selectedMap !== mapName) {
+      return;
+    }
     console.error(error);
     els.detailLoading.textContent = `Could not load ${prettyMapName(mapName)}: ${error.message}`;
   }
+};
+
+function resetDetailView() {
+  if (els.detailCanvas) {
+    els.detailCanvas.style.visibility = "hidden";
+    els.detailCanvas.width = 1;
+    els.detailCanvas.height = 1;
+  }
+
+  if (els.mapTooltip) {
+    els.mapTooltip.classList.add("hidden");
+  }
+}
+
+const baseCloseRegionForDetailCleanup = closeRegion;
+closeRegion = function() {
+  resetDetailView();
+  if (els.detailLoading) {
+    els.detailLoading.style.display = "block";
+    els.detailLoading.textContent = "Loading region…";
+  }
+  baseCloseRegionForDetailCleanup();
 };
 
 async function loadLocalRegionImage(mapName) {
