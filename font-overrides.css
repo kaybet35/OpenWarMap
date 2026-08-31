@@ -10,34 +10,6 @@ td {
   font-family: "Jost", system-ui, sans-serif !important;
 }
 
-.topbar-refresh {
-  display: grid;
-  gap: 1px;
-  min-width: 84px;
-  color: var(--muted);
-}
-
-.world-layer-controls .topbar-refresh {
-  width: 100%;
-  margin-top: 2px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(60, 72, 84, 0.72);
-  text-align: left;
-}
-
-.topbar-refresh span {
-  font-size: 10px;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.topbar-refresh strong {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
 .report-region-name {
   display: flex;
   min-width: 0;

@@ -145,7 +145,7 @@ async function refreshOverviewData() {
 
     updateSummary();
     renderReportTable();
-    els.lastRefresh.textContent = new Date().toLocaleTimeString();
+    els.lastRefresh.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     setStatus("online", "Live");
   } catch (error) {
     console.error(error);

@@ -325,7 +325,7 @@ function setupWorldLayerControls() {
       margin: 0;
     }
 
-    .detail-toolbar .muted {
+    .map-layer-controls > .muted {
       margin-top: 2px;
       padding-top: 6px;
       border-top: 1px solid rgba(60, 72, 84, 0.72);
