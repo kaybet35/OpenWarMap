@@ -14,9 +14,15 @@ td {
   display: grid;
   gap: 1px;
   min-width: 84px;
-  align-self: center;
   color: var(--muted);
-  text-align: right;
+}
+
+.world-layer-controls .topbar-refresh {
+  width: 100%;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(60, 72, 84, 0.72);
+  text-align: left;
 }
 
 .topbar-refresh span {
@@ -87,9 +93,5 @@ td {
 @media (max-width: 720px) {
   body {
     padding-bottom: 240px;
-  }
-
-  .topbar-refresh {
-    text-align: left;
   }
 }
