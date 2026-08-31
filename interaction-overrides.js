@@ -178,7 +178,7 @@ interactionStyle.textContent = `
   }
 
   .report-region-row:focus-visible {
-    outline: 1px solid var(--accent);
+    outline: 1px solid #65798c;
     outline-offset: -1px;
   }
 `;

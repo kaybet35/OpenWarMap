@@ -10,14 +10,6 @@ td {
   font-family: "Jost", system-ui, sans-serif !important;
 }
 
-.summary-grid {
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-}
-
-.content-grid {
-  grid-template-columns: 1fr;
-}
-
 .topbar-refresh {
   display: grid;
   gap: 1px;
@@ -86,20 +78,15 @@ td {
   content: "▼";
 }
 
-.sortable-header:focus-visible {
+.sortable-header:focus-visible,
+.report-region-row:focus-visible {
   outline: 1px solid #65798c;
   outline-offset: -2px;
 }
 
-@media (max-width: 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 720px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
+  body {
+    padding-bottom: 240px;
   }
 
   .topbar-refresh {

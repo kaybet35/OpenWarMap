@@ -218,8 +218,7 @@ function updateReportSortHeaders() {
 }
 
 function regionThumbnailUrl(mapName) {
-  const fileName = mapAssetName(mapName).replace(/\.TGA$/i, ".png");
-  return `img/${fileName}`;
+  return worldTileImageUrl(mapName);
 }
 
 function setupReportCollapse() {
