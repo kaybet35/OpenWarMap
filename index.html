@@ -16,7 +16,6 @@
     <section class="content-grid">
       <article class="panel world-panel">
         <div class="world-viewport">
-          <canvas id="worldCanvas"></canvas>
           <div class="world-control-stack">
             <div class="map-layer-controls world-status-controls">
               <div class="world-status-summary">
@@ -77,6 +76,12 @@
               <span id="lastRefresh" class="muted">Updated —</span>
             </div>
           </div>
+
+          <div class="world-map-area">
+            <canvas id="worldCanvas"></canvas>
+            <div id="worldLoading" class="canvas-message">Loading world map tiles…</div>
+          </div>
+
           <div class="world-war-stats" aria-live="polite">
             <span class="warden-text"><small>Warden VP</small><strong id="wardenVp">—</strong></span>
             <span class="colonial-text"><small>Colonial VP</small><strong id="colonialVp">—</strong></span>
@@ -84,11 +89,9 @@
             <span class="colonial-text"><small>Colonial Casualties</small><strong id="colonialCasualties">—</strong></span>
             <span><small>Total Casualties</small><strong id="totalCasualtiesSummary">—</strong></span>
           </div>
-          <div id="worldLoading" class="canvas-message">Loading world map tiles…</div>
 
           <section id="detailPanel" class="detail-panel hidden">
             <div class="detail-viewport">
-              <canvas id="detailCanvas"></canvas>
               <div class="detail-toolbar map-layer-controls">
                 <button id="closeDetail" class="detail-back-button" type="button">← World overview</button>
                 <div class="detail-map-heading">
@@ -102,6 +105,13 @@
                 <label><input id="showFrontline" type="checkbox"> Frontline</label>
                 <span id="detailUpdated" class="muted">Updated —</span>
               </div>
+
+              <div class="detail-map-area">
+                <canvas id="detailCanvas"></canvas>
+                <div id="detailLoading" class="canvas-message">Loading region…</div>
+                <div id="mapTooltip" class="map-tooltip hidden"></div>
+              </div>
+
               <div class="detail-stats" aria-live="polite">
                 <div class="warden-text"><span>Warden Casualties</span><strong id="detailWardenCas">—</strong></div>
                 <div class="colonial-text"><span>Colonial Casualties</span><strong id="detailColonialCas">—</strong></div>
@@ -109,8 +119,6 @@
                 <div><span>Enlistments</span><strong id="detailEnlistments">—</strong></div>
               </div>
               <input id="showNeutral" type="checkbox" checked hidden>
-              <div id="detailLoading" class="canvas-message">Loading region…</div>
-              <div id="mapTooltip" class="map-tooltip hidden"></div>
             </div>
           </section>
         </div>
@@ -118,9 +126,9 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <span>Data: official Foxhole WarAPI</span>
-    <span>Maps & icons: local PNG assets</span>
+  <footer class="legal-footer">
+    <span>Data is provided by WarAPI. Foxhole® is a registered trademark of Siege Camp (Clapfoot Inc.). All trademarks and registered trademarks present here are proprietary to Siege Camp.</span>
+    <span>All files, data, and materials provided here are for educational purposes only.</span>
   </footer>
 
   <script src="script.js"></script>

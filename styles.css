@@ -499,15 +499,6 @@ input[type="search"] {
   pointer-events: none;
 }
 
-.footer {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 2px 14px 18px;
-  color: #66727e;
-  font-size: 11px;
-}
-
 @media (max-width: 1180px) {
   .summary-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -551,11 +542,5 @@ input[type="search"] {
     top: auto;
     right: 12px;
     bottom: 12px;
-  }
-
-  .footer {
-    flex-direction: column;
-    gap: 2px;
-    text-align: center;
   }
 }

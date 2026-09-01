@@ -189,9 +189,11 @@ function setupWorldLayerControls() {
 
     @media (max-width: 900px) {
       .world-war-stats {
+        position: static;
         top: auto;
-        right: 12px;
-        bottom: 12px;
+        right: auto;
+        bottom: auto;
+        width: 100%;
       }
     }
   `;
