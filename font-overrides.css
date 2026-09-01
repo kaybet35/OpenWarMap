@@ -146,6 +146,12 @@ body {
   padding: 0 10px;
 }
 
+.world-icon-layer-menu.layer-group {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .detail-viewport canvas {
   width: auto;
   height: auto;
@@ -155,6 +161,8 @@ body {
 }
 
 .legal-footer {
+  position: relative;
+  z-index: 30;
   display: grid;
   flex: 0 0 auto;
   gap: 1px;
@@ -245,10 +253,103 @@ body {
     border-radius: 0;
   }
 
-  .world-war-stats > span,
-  .detail-stats > div {
-    min-width: 0;
+  .world-viewport > .world-war-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+    row-gap: 10px;
+  }
+
+  .world-viewport > .world-war-stats > span {
+    position: relative;
     width: 100%;
+    min-width: 0;
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(1),
+  .world-viewport > .world-war-stats > span:nth-child(3) {
+    text-align: right;
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(2),
+  .world-viewport > .world-war-stats > span:nth-child(4) {
+    text-align: left;
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(1)::before,
+  .world-viewport > .world-war-stats > span:nth-child(1)::after,
+  .world-viewport > .world-war-stats > span:nth-child(3)::before,
+  .world-viewport > .world-war-stats > span:nth-child(3)::after {
+    position: absolute;
+    right: -17px;
+    color: var(--muted);
+    content: "—";
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(1)::before,
+  .world-viewport > .world-war-stats > span:nth-child(3)::before {
+    top: -1px;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(1)::after,
+  .world-viewport > .world-war-stats > span:nth-child(3)::after {
+    bottom: -1px;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  .world-viewport > .world-war-stats > span:nth-child(5) {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .detail-viewport > .detail-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+    row-gap: 10px;
+  }
+
+  .detail-viewport > .detail-stats > div {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(1) {
+    text-align: right;
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(2) {
+    text-align: left;
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(1)::before,
+  .detail-viewport > .detail-stats > div:nth-child(1)::after {
+    position: absolute;
+    right: -17px;
+    color: var(--muted);
+    content: "—";
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(1)::before {
+    top: -1px;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(1)::after {
+    bottom: -1px;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  .detail-viewport > .detail-stats > div:nth-child(3),
+  .detail-viewport > .detail-stats > div:nth-child(4) {
+    grid-column: 1 / -1;
+    text-align: center;
   }
 
   .detail-panel {

@@ -150,6 +150,8 @@ function setupWorldLayerControls() {
       right: 12px;
       z-index: 5;
       display: flex;
+      width: max-content;
+      max-width: calc(100% - 24px);
       flex-direction: column;
       align-items: stretch;
       gap: 6px;
@@ -164,7 +166,7 @@ function setupWorldLayerControls() {
     .world-war-stats > span {
       display: grid;
       gap: 2px;
-      min-width: 190px;
+      min-width: 0;
       text-align: right;
     }
 
@@ -194,6 +196,7 @@ function setupWorldLayerControls() {
         right: auto;
         bottom: auto;
         width: 100%;
+        max-width: none;
       }
     }
   `;

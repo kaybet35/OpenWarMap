@@ -43,30 +43,35 @@
             </div>
 
             <div id="worldLayerControls" class="map-layer-controls world-layer-controls">
-              <label>
-                <input type="checkbox" data-world-layer="regionNames">
-                <span>Region Names</span>
-              </label>
-              <label>
-                <input type="checkbox" data-world-layer="victoryBases" checked>
-                <span>Victory Bases</span>
-              </label>
-              <label>
-                <input type="checkbox" data-world-layer="otherBases" checked>
-                <span>Other Bases</span>
-              </label>
-              <label>
-                <input type="checkbox" data-world-layer="casualtyHeatmap">
-                <span>Casualty Heatmap</span>
-              </label>
-              <label>
-                <input type="checkbox" data-world-layer="territoryOwnership" checked>
-                <span>Sub-regions</span>
-              </label>
-              <label>
-                <input type="checkbox" data-world-layer="frontline" checked>
-                <span>Frontline</span>
-              </label>
+              <details class="world-icon-layer-menu layer-group">
+                <summary>Layers</summary>
+                <div class="world-icon-layer-list">
+                  <label>
+                    <input type="checkbox" data-world-layer="regionNames">
+                    <span>Region Names</span>
+                  </label>
+                  <label>
+                    <input type="checkbox" data-world-layer="victoryBases" checked>
+                    <span>Victory Bases</span>
+                  </label>
+                  <label>
+                    <input type="checkbox" data-world-layer="otherBases" checked>
+                    <span>Other Bases</span>
+                  </label>
+                  <label>
+                    <input type="checkbox" data-world-layer="casualtyHeatmap">
+                    <span>Casualty Heatmap</span>
+                  </label>
+                  <label>
+                    <input type="checkbox" data-world-layer="territoryOwnership" checked>
+                    <span>Sub-regions</span>
+                  </label>
+                  <label>
+                    <input type="checkbox" data-world-layer="frontline" checked>
+                    <span>Frontline</span>
+                  </label>
+                </div>
+              </details>
               <details id="worldIconLayerMenu" class="world-icon-layer-menu">
                 <summary>Map Icons</summary>
                 <div id="worldIconLayerList" class="world-icon-layer-list">
@@ -98,11 +103,16 @@
                   <strong id="detailTitle">Region</strong>
                   <small id="detailSubtitle">Live public map data</small>
                 </div>
-                <label><input id="showLabels" type="checkbox"> Locations</label>
-                <label><input id="showResources" type="checkbox" checked> Resources</label>
-                <label><input id="showStructures" type="checkbox" checked> Structures</label>
-                <label><input id="showSubregions" type="checkbox" checked> Sub-regions</label>
-                <label><input id="showFrontline" type="checkbox"> Frontline</label>
+                <details class="world-icon-layer-menu layer-group">
+                  <summary>Layers</summary>
+                  <div class="world-icon-layer-list">
+                    <label><input id="showLabels" type="checkbox"> Locations</label>
+                    <label><input id="showResources" type="checkbox" checked> Resources</label>
+                    <label><input id="showStructures" type="checkbox" checked> Structures</label>
+                    <label><input id="showSubregions" type="checkbox" checked> Sub-regions</label>
+                    <label><input id="showFrontline" type="checkbox"> Frontline</label>
+                  </div>
+                </details>
                 <span id="detailUpdated" class="muted">Updated —</span>
               </div>
 
