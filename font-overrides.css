@@ -194,6 +194,10 @@ body {
     overflow-y: auto;
   }
 
+  .world-viewport {
+    overflow-y: hidden;
+  }
+
   .world-control-stack,
   .detail-viewport > .detail-toolbar {
     position: static;
@@ -226,7 +230,16 @@ body {
     flex-wrap: wrap;
   }
 
-  .world-map-area,
+  .world-map-area {
+    position: relative;
+    inset: auto;
+    order: 2;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 1 1 0;
+  }
+
   .detail-map-area {
     position: relative;
     inset: auto;

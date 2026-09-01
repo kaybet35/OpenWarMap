@@ -1,7 +1,8 @@
 const SHARDS = {
   "1": "https://war-service-live.foxholeservices.com/api",
   "2": "https://war-service-live-2.foxholeservices.com/api",
-  "3": "https://war-service-live-3.foxholeservices.com/api"
+  "3": "https://war-service-live-3.foxholeservices.com/api",
+  "dev": "https://war-service-dev.foxholeservices.com/api"
 };
 
 const FLAGS = {
