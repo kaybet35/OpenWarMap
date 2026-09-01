@@ -76,9 +76,7 @@ select {
 }
 
 .brand h1,
-.brand p,
-.panel-header h2,
-.panel-header p {
+.brand p {
   margin: 0;
 }
 
@@ -86,8 +84,7 @@ select {
   font-size: 18px;
 }
 
-.brand p,
-.panel-header p {
+.brand p {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
@@ -223,24 +220,6 @@ input[type="search"] {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-}
-
-.panel-header {
-  display: flex;
-  min-height: 64px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.panel-header.compact {
-  min-height: 56px;
-}
-
-.panel-header h2 {
-  font-size: 16px;
 }
 
 .legend {
@@ -518,40 +497,6 @@ input[type="search"] {
   color: var(--text);
   font-size: 12px;
   pointer-events: none;
-}
-
-.table-wrap {
-  overflow: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-th,
-td {
-  padding: 8px 11px;
-  border-bottom: 1px solid #202832;
-  text-align: right;
-  white-space: nowrap;
-}
-
-th:first-child,
-td:first-child {
-  text-align: left;
-}
-
-th {
-  background: var(--surface-2);
-  color: #b8c2cc;
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-tbody tr:hover {
-  background: #171e25;
 }
 
 .footer {

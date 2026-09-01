@@ -1,8 +1,3 @@
-const reportSortState = {
-  key: "casualties",
-  direction: "desc"
-};
-
 refreshAll = async function() {
   setStatus("loading", "Refreshing…");
 
@@ -89,157 +84,6 @@ function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
 
-renderReportTable = function() {
-  const rows = state.maps.map(name => ({
-    name,
-    displayName: prettyMapName(name),
-    report: state.reports.get(name) || {}
-  }));
-
-  rows.sort(compareReportRows);
-
-  els.reportTableBody.innerHTML = rows.map(item => `
-    <tr>
-      <td>
-        <span class="report-region-name">
-          <img class="region-thumb report-thumb" src="${regionThumbnailUrl(item.name)}" alt="" width="40" height="30">
-          <span>${item.displayName}</span>
-        </span>
-      </td>
-      <td>${item.report.dayOfWar ?? "—"}</td>
-      <td>${formatNumber(item.report.totalEnlistments || 0)}</td>
-      <td class="warden-text">${formatNumber(item.report.wardenCasualties || 0)}</td>
-      <td class="colonial-text">${formatNumber(item.report.colonialCasualties || 0)}</td>
-      <td>${formatNumber(totalCasualties(item.report))}</td>
-    </tr>
-  `).join("");
-
-  updateReportTotals();
-  updateReportSortHeaders();
-};
-
-function compareReportRows(a, b) {
-  const direction = reportSortState.direction === "asc" ? 1 : -1;
-  let result = 0;
-
-  switch (reportSortState.key) {
-    case "region":
-      result = a.displayName.localeCompare(b.displayName);
-      break;
-    case "day":
-      result = (a.report.dayOfWar || 0) - (b.report.dayOfWar || 0);
-      break;
-    case "enlistments":
-      result = (a.report.totalEnlistments || 0) - (b.report.totalEnlistments || 0);
-      break;
-    case "warden":
-      result = (a.report.wardenCasualties || 0) - (b.report.wardenCasualties || 0);
-      break;
-    case "colonial":
-      result = (a.report.colonialCasualties || 0) - (b.report.colonialCasualties || 0);
-      break;
-    default:
-      result = totalCasualties(a.report) - totalCasualties(b.report);
-      break;
-  }
-
-  return result * direction;
-}
-
-function updateReportTotals() {
-  const totalsRow = document.getElementById("reportTableTotals");
-  if (!totalsRow) {
-    return;
-  }
-
-  let maxDay = 0;
-  let totalEnlistments = 0;
-  let totalWardenCasualties = 0;
-  let totalColonialCasualties = 0;
-
-  for (const mapName of state.maps) {
-    const report = state.reports.get(mapName) || {};
-    maxDay = Math.max(maxDay, report.dayOfWar || 0);
-    totalEnlistments += report.totalEnlistments || 0;
-    totalWardenCasualties += report.wardenCasualties || 0;
-    totalColonialCasualties += report.colonialCasualties || 0;
-  }
-
-  totalsRow.innerHTML = `
-    <th>Total (${state.maps.length} regions)</th>
-    <th>${maxDay || "—"}</th>
-    <th>${formatNumber(totalEnlistments)}</th>
-    <th class="warden-text">${formatNumber(totalWardenCasualties)}</th>
-    <th class="colonial-text">${formatNumber(totalColonialCasualties)}</th>
-    <th>${formatNumber(totalWardenCasualties + totalColonialCasualties)}</th>
-  `;
-}
-
-function setupReportSorting() {
-  const headers = document.querySelectorAll(".table-panel thead th");
-  const keys = ["region", "day", "enlistments", "warden", "colonial", "casualties"];
-
-  headers.forEach((header, index) => {
-    header.dataset.sortKey = keys[index];
-    header.classList.add("sortable-header");
-    header.tabIndex = 0;
-    header.setAttribute("role", "button");
-
-    const activate = () => {
-      const key = header.dataset.sortKey;
-      if (reportSortState.key === key) {
-        reportSortState.direction = reportSortState.direction === "asc" ? "desc" : "asc";
-      } else {
-        reportSortState.key = key;
-        reportSortState.direction = key === "region" ? "asc" : "desc";
-      }
-      renderReportTable();
-    };
-
-    header.addEventListener("click", activate);
-    header.addEventListener("keydown", event => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        activate();
-      }
-    });
-  });
-
-  updateReportSortHeaders();
-}
-
-function updateReportSortHeaders() {
-  document.querySelectorAll(".table-panel thead th").forEach(header => {
-    header.classList.toggle("is-sorted", header.dataset.sortKey === reportSortState.key);
-    header.dataset.sortDirection = header.dataset.sortKey === reportSortState.key
-      ? reportSortState.direction
-      : "";
-  });
-}
-
-function regionThumbnailUrl(mapName) {
-  return worldTileImageUrl(mapName);
-}
-
-function setupReportCollapse() {
-  const button = document.getElementById("reportTableToggle");
-  const tableWrap = document.getElementById("reportTableWrap");
-  if (!button || !tableWrap) {
-    return;
-  }
-
-  const setExpanded = expanded => {
-    tableWrap.hidden = !expanded;
-    button.setAttribute("aria-expanded", String(expanded));
-    button.textContent = expanded ? "Hide table" : "Show table";
-  };
-
-  setExpanded(false);
-  button.addEventListener("click", () => {
-    setExpanded(button.getAttribute("aria-expanded") !== "true");
-  });
-}
-
 function setupWorldLayerControls() {
   const controls = document.getElementById("worldLayerControls");
   if (!controls) {
@@ -260,39 +104,6 @@ function setupWorldLayerControls() {
 
   const style = document.createElement("style");
   style.textContent = `
-    .topbar-war-info {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      color: var(--muted);
-    }
-
-    .topbar-war-info > span {
-      display: grid;
-      gap: 1px;
-      text-align: center;
-    }
-
-    .topbar-war-info small,
-    .world-war-stats small {
-      color: var(--muted);
-      font-size: 9px;
-      line-height: 1;
-      text-transform: uppercase;
-    }
-
-    .topbar-war-info strong {
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1.15;
-    }
-
-    .topbar-war-duration {
-      min-width: 92px;
-    }
-
     .map-layer-controls {
       position: absolute;
       top: 12px;
@@ -357,6 +168,13 @@ function setupWorldLayerControls() {
       text-align: right;
     }
 
+    .world-war-stats small {
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
     .world-war-stats strong {
       color: inherit;
       font-size: 12px;
@@ -370,11 +188,6 @@ function setupWorldLayerControls() {
     }
 
     @media (max-width: 900px) {
-      .topbar-war-info {
-        order: 3;
-        width: 100%;
-      }
-
       .world-war-stats {
         top: auto;
         right: 12px;
@@ -385,11 +198,7 @@ function setupWorldLayerControls() {
   document.head.appendChild(style);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  setupReportSorting();
-  setupReportCollapse();
-  setupWorldLayerControls();
-});
+document.addEventListener("DOMContentLoaded", setupWorldLayerControls);
 
 if (document.fonts?.load) {
   Promise.all([

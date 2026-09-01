@@ -127,6 +127,22 @@ function findWorldHexAt(x, y) {
   ) || null;
 }
 
+function getWorldReportRank(mapName, valueGetter) {
+  const ranked = state.maps
+    .filter(name => state.reports.has(name))
+    .map(name => ({
+      name,
+      value: valueGetter(state.reports.get(name) || {})
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const index = ranked.findIndex(entry => entry.name === mapName);
+  return {
+    rank: index >= 0 ? index + 1 : null,
+    total: ranked.length
+  };
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const viewport = els.worldCanvas?.parentElement;
   if (!viewport) {
@@ -150,10 +166,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const report = hit.mapName ? state.reports.get(hit.mapName) : null;
-    tooltip.innerHTML = `<strong>${hit.name}</strong>${report ? `<br><span class="warden-text">W ${formatNumber(report.wardenCasualties || 0)}</span> · <span class="colonial-text">C ${formatNumber(report.colonialCasualties || 0)}</span>` : ""}`;
+    if (report) {
+      const warden = report.wardenCasualties || 0;
+      const colonial = report.colonialCasualties || 0;
+      const total = warden + colonial;
+      const enlistments = report.totalEnlistments || 0;
+      const wardenPercent = total ? warden / total * 100 : 0;
+      const colonialPercent = total ? colonial / total * 100 : 0;
+      const casualtyRank = getWorldReportRank(hit.mapName, totalCasualties);
+      const enlistmentRank = getWorldReportRank(hit.mapName, value => value.totalEnlistments || 0);
+
+      tooltip.innerHTML = `
+        <strong>${hit.name}</strong><br>
+        <span class="warden-text">Warden Casualties: ${formatNumber(warden)} (${wardenPercent.toFixed(1)}%)</span><br>
+        <span class="colonial-text">Colonial Casualties: ${formatNumber(colonial)} (${colonialPercent.toFixed(1)}%)</span><br>
+        Total Casualties: ${formatNumber(total)}${casualtyRank.rank ? ` <span class="muted">(#${casualtyRank.rank} / ${casualtyRank.total})</span>` : ""}<br>
+        Enlistments: ${formatNumber(enlistments)}${enlistmentRank.rank ? ` <span class="muted">(#${enlistmentRank.rank} / ${enlistmentRank.total})</span>` : ""}
+      `;
+    } else {
+      tooltip.innerHTML = `<strong>${hit.name}</strong>`;
+    }
+
     tooltip.classList.remove("hidden");
-    tooltip.style.left = `${Math.min(x + 14, rect.width - 220)}px`;
-    tooltip.style.top = `${Math.min(y + 14, rect.height - 70)}px`;
+    const tooltipWidth = tooltip.offsetWidth;
+    const tooltipHeight = tooltip.offsetHeight;
+    tooltip.style.left = `${Math.max(0, Math.min(x + 14, rect.width - tooltipWidth - 8))}px`;
+    tooltip.style.top = `${Math.max(0, Math.min(y + 14, rect.height - tooltipHeight - 8))}px`;
   });
 
   els.worldCanvas.addEventListener("mouseleave", () => tooltip.classList.add("hidden"));

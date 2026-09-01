@@ -3,67 +3,93 @@ body,
 button,
 input,
 select,
-textarea,
-table,
-th,
-td {
+textarea {
   font-family: "Jost", system-ui, sans-serif !important;
 }
 
-.report-region-name {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
+body {
+  padding-bottom: 0;
 }
 
-.region-thumb {
-  display: block;
-  width: 40px;
-  height: 30px;
-  flex: 0 0 auto;
-  border: 1px solid #2a3440;
-  border-radius: 3px;
-  background: #090c0f;
-}
-
-.report-thumb {
-  width: 36px;
-  height: 27px;
-}
-
-.sortable-header {
-  position: relative;
-  padding-right: 24px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.sortable-header::after {
+.world-control-stack {
   position: absolute;
-  right: 9px;
-  content: "↕";
-  color: #66727e;
-  font-size: 10px;
+  top: 12px;
+  left: 12px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.sortable-header.is-sorted::after {
-  content: "▲";
-  color: #b8c2cc;
+.world-control-stack > .map-layer-controls {
+  position: static;
+  top: auto;
+  left: auto;
 }
 
-.sortable-header.is-sorted[data-sort-direction="desc"]::after {
-  content: "▼";
+.world-status-controls {
+  gap: 8px;
 }
 
-.sortable-header:focus-visible,
-.report-region-row:focus-visible {
-  outline: 1px solid #65798c;
-  outline-offset: -2px;
+.world-status-summary,
+.world-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.world-status-summary {
+  justify-content: space-between;
+}
+
+.world-status-summary > span {
+  display: grid;
+  gap: 1px;
+}
+
+.world-status-summary small {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.world-status-summary strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.world-status-actions {
+  align-items: end;
+}
+
+.world-shard-field {
+  min-width: 78px;
+}
+
+.world-shard-field select {
+  min-height: 30px;
+  padding-left: 8px;
+}
+
+.world-status-actions .button,
+.world-status-actions .status-pill {
+  min-height: 30px;
+}
+
+.world-status-actions .button {
+  padding: 0 10px;
 }
 
 @media (max-width: 720px) {
-  body {
-    padding-bottom: 240px;
+  .world-control-stack {
+    max-width: calc(100% - 24px);
+  }
+
+  .world-status-actions {
+    flex-wrap: wrap;
   }
 }

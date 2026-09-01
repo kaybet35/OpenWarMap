@@ -1,32 +1,3 @@
-renderReportTable = function() {
-  const rows = state.maps.map(name => ({
-    name,
-    displayName: prettyMapName(name),
-    report: state.reports.get(name) || {}
-  }));
-
-  rows.sort(compareReportRows);
-
-  els.reportTableBody.innerHTML = rows.map(item => `
-    <tr class="report-region-row" data-map-name="${item.name}" tabindex="0">
-      <td>
-        <span class="report-region-name">
-          <img class="region-thumb report-thumb" src="${regionThumbnailUrl(item.name)}" alt="" width="40" height="30">
-          <span>${item.displayName}</span>
-        </span>
-      </td>
-      <td>${item.report.dayOfWar ?? "—"}</td>
-      <td>${formatNumber(item.report.totalEnlistments || 0)}</td>
-      <td class="warden-text">${formatNumber(item.report.wardenCasualties || 0)}</td>
-      <td class="colonial-text">${formatNumber(item.report.colonialCasualties || 0)}</td>
-      <td>${formatNumber(totalCasualties(item.report))}</td>
-    </tr>
-  `).join("");
-
-  updateReportTotals();
-  updateReportSortHeaders();
-};
-
 drawDetailVoronoi = function(ctx, labels, mapItems, mapX, mapY, mapWidth, mapHeight) {
   const showSubregions = document.getElementById("showSubregions")?.checked !== false;
   const showFrontline = document.getElementById("showFrontline")?.checked === true;
@@ -109,34 +80,6 @@ drawDetailVoronoi = function(ctx, labels, mapItems, mapX, mapY, mapWidth, mapHei
   }
 };
 
-function setupReportRegionLinks() {
-  if (!els.reportTableBody) {
-    return;
-  }
-
-  const openRow = row => {
-    if (row?.dataset.mapName) {
-      openRegion(row.dataset.mapName);
-    }
-  };
-
-  els.reportTableBody.addEventListener("click", event => {
-    openRow(event.target.closest("tr[data-map-name]"));
-  });
-
-  els.reportTableBody.addEventListener("keydown", event => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    const row = event.target.closest("tr[data-map-name]");
-    if (row) {
-      event.preventDefault();
-      openRow(row);
-    }
-  });
-}
-
 function setupDetailLayerControls() {
   const subregions = document.getElementById("showSubregions");
   const frontline = document.getElementById("showFrontline");
@@ -171,21 +114,7 @@ function applyMapLayerDefaults() {
   drawRegion();
 }
 
-const interactionStyle = document.createElement("style");
-interactionStyle.textContent = `
-  .report-region-row {
-    cursor: pointer;
-  }
-
-  .report-region-row:focus-visible {
-    outline: 1px solid #65798c;
-    outline-offset: -1px;
-  }
-`;
-document.head.appendChild(interactionStyle);
-
 document.addEventListener("DOMContentLoaded", () => {
-  setupReportRegionLinks();
   setupDetailLayerControls();
   applyMapLayerDefaults();
 });

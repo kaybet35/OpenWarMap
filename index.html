@@ -12,81 +12,70 @@
   <link rel="stylesheet" href="font-overrides.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">OWM</div>
-      <div>
-        <h1>OpenWarMap</h1>
-        <p>Live World Conquest data via the official WarAPI</p>
-      </div>
-    </div>
-
-    <div class="topbar-war-info">
-      <span>
-        <small>War</small>
-        <strong id="warNumber">—</strong>
-      </span>
-      <span>
-        <small>Day</small>
-        <strong id="warDay">—</strong>
-      </span>
-      <span class="topbar-war-duration">
-        <small id="warPhase">Loading</small>
-        <strong id="warDuration">—</strong>
-      </span>
-    </div>
-
-    <div class="topbar-actions">
-      <label class="field">
-        <span>Shard</span>
-        <select id="shardSelect">
-          <option value="1">Live-1</option>
-          <option value="2">Live-2</option>
-          <option value="3">Live-3</option>
-        </select>
-      </label>
-      <button id="refreshButton" class="button" type="button">Refresh</button>
-      <div id="connectionStatus" class="status-pill is-loading">Connecting…</div>
-    </div>
-  </header>
-
   <main class="app-shell">
     <section class="content-grid">
       <article class="panel world-panel">
         <div class="world-viewport">
           <canvas id="worldCanvas"></canvas>
-          <div id="worldLayerControls" class="map-layer-controls world-layer-controls">
-            <label>
-              <input type="checkbox" data-world-layer="regionNames">
-              <span>Region Names</span>
-            </label>
-            <label>
-              <input type="checkbox" data-world-layer="victoryBases" checked>
-              <span>Victory Bases</span>
-            </label>
-            <label>
-              <input type="checkbox" data-world-layer="otherBases" checked>
-              <span>Other Bases</span>
-            </label>
-            <label>
-              <input type="checkbox" data-world-layer="casualtyHeatmap">
-              <span>Casualty Heatmap</span>
-            </label>
-            <label>
-              <input type="checkbox" data-world-layer="territoryOwnership" checked>
-              <span>Sub-regions</span>
-            </label>
-            <label>
-              <input type="checkbox" data-world-layer="frontline" checked>
-              <span>Frontline</span>
-            </label>
-            <details id="worldIconLayerMenu" class="world-icon-layer-menu">
-              <summary>Map Icons</summary>
-              <div id="worldIconLayerList" class="world-icon-layer-list">
-                <span class="world-icon-layer-empty">Loading map icons…</span>
+          <div class="world-control-stack">
+            <div class="map-layer-controls world-status-controls">
+              <div class="world-status-summary">
+                <span>
+                  <small>War</small>
+                  <strong id="warNumber">—</strong>
+                </span>
+                <span>
+                  <small id="warPhase">Loading</small>
+                  <strong id="warDuration">—</strong>
+                </span>
               </div>
-            </details>
-            <span id="lastRefresh" class="muted">Updated —</span>
+              <div class="world-status-actions">
+                <label class="field world-shard-field">
+                  <span>Shard</span>
+                  <select id="shardSelect">
+                    <option value="1">Live-1</option>
+                    <option value="2">Live-2</option>
+                    <option value="3">Live-3</option>
+                  </select>
+                </label>
+                <button id="refreshButton" class="button" type="button">Refresh</button>
+                <div id="connectionStatus" class="status-pill is-loading">Connecting…</div>
+              </div>
+            </div>
+
+            <div id="worldLayerControls" class="map-layer-controls world-layer-controls">
+              <label>
+                <input type="checkbox" data-world-layer="regionNames">
+                <span>Region Names</span>
+              </label>
+              <label>
+                <input type="checkbox" data-world-layer="victoryBases" checked>
+                <span>Victory Bases</span>
+              </label>
+              <label>
+                <input type="checkbox" data-world-layer="otherBases" checked>
+                <span>Other Bases</span>
+              </label>
+              <label>
+                <input type="checkbox" data-world-layer="casualtyHeatmap">
+                <span>Casualty Heatmap</span>
+              </label>
+              <label>
+                <input type="checkbox" data-world-layer="territoryOwnership" checked>
+                <span>Sub-regions</span>
+              </label>
+              <label>
+                <input type="checkbox" data-world-layer="frontline" checked>
+                <span>Frontline</span>
+              </label>
+              <details id="worldIconLayerMenu" class="world-icon-layer-menu">
+                <summary>Map Icons</summary>
+                <div id="worldIconLayerList" class="world-icon-layer-list">
+                  <span class="world-icon-layer-empty">Loading map icons…</span>
+                </div>
+              </details>
+              <span id="lastRefresh" class="muted">Updated —</span>
+            </div>
           </div>
           <div class="world-war-stats" aria-live="polite">
             <span class="warden-text"><small>Warden VP</small><strong id="wardenVp">—</strong></span>
@@ -114,9 +103,9 @@
                 <span id="detailUpdated" class="muted">Updated —</span>
               </div>
               <div class="detail-stats" aria-live="polite">
-                <div><span>Day</span><strong id="detailDay">—</strong></div>
                 <div class="warden-text"><span>Warden Casualties</span><strong id="detailWardenCas">—</strong></div>
                 <div class="colonial-text"><span>Colonial Casualties</span><strong id="detailColonialCas">—</strong></div>
+                <div><span>Total Casualties</span><strong id="detailTotalCas">—</strong></div>
                 <div><span>Enlistments</span><strong id="detailEnlistments">—</strong></div>
               </div>
               <input id="showNeutral" type="checkbox" checked hidden>
@@ -126,43 +115,6 @@
           </section>
         </div>
       </article>
-    </section>
-
-    <section class="panel table-panel">
-      <div class="panel-header">
-        <div>
-          <h2>War Report by Region</h2>
-          <p>Current public region report values from WarAPI.</p>
-        </div>
-        <button id="reportTableToggle" class="button" type="button" aria-expanded="false" aria-controls="reportTableWrap">Show table</button>
-      </div>
-      <div id="reportTableWrap" class="table-wrap" hidden>
-        <table>
-          <thead>
-            <tr>
-              <th>Region</th>
-              <th>Day</th>
-              <th>Enlistments</th>
-              <th class="warden-text">Warden casualties</th>
-              <th class="colonial-text">Colonial casualties</th>
-              <th>Total casualties</th>
-            </tr>
-          </thead>
-          <tbody id="reportTableBody">
-            <tr><td colspan="6">Loading…</td></tr>
-          </tbody>
-          <tfoot>
-            <tr id="reportTableTotals">
-              <th>Total</th>
-              <th>—</th>
-              <th>0</th>
-              <th class="warden-text">0</th>
-              <th class="colonial-text">0</th>
-              <th>0</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
     </section>
   </main>
 

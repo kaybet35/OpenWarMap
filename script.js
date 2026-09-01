@@ -43,12 +43,12 @@ document.addEventListener("DOMContentLoaded", init);
 function init() {
   [
     "shardSelect", "refreshButton", "connectionStatus", "warNumber", "warPhase",
-    "warDay", "warDuration", "wardenVp", "colonialVp", "wardenCasualties",
-    "colonialCasualties", "lastRefresh", "worldCanvas", "worldLoading",
-    "reportTableBody", "detailPanel", "closeDetail", "detailTitle", "detailSubtitle",
-    "detailDay", "detailWardenCas", "detailColonialCas", "detailEnlistments",
-    "detailUpdated", "detailCanvas", "detailLoading", "showLabels", "showResources",
-    "showStructures", "showNeutral", "mapTooltip"
+    "warDuration", "wardenVp", "colonialVp", "wardenCasualties", "colonialCasualties",
+    "lastRefresh", "worldCanvas", "worldLoading", "detailPanel", "closeDetail",
+    "detailTitle", "detailSubtitle", "detailTotalCas", "detailWardenCas",
+    "detailColonialCas", "detailEnlistments", "detailUpdated", "detailCanvas",
+    "detailLoading", "showLabels", "showResources", "showStructures", "showNeutral",
+    "mapTooltip"
   ].forEach(id => els[id] = document.getElementById(id));
 
   els.shardSelect.addEventListener("change", async () => {
@@ -144,7 +144,6 @@ async function refreshOverviewData() {
     });
 
     updateSummary();
-    renderReportTable();
     els.lastRefresh.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     setStatus("online", "Live");
   } catch (error) {
@@ -178,7 +177,6 @@ function updateSummary() {
   let scorched = 0;
   let wardenCas = 0;
   let colonialCas = 0;
-  let maxDay = 0;
 
   for (const data of state.dynamic.values()) {
     for (const item of data.mapItems || []) {
@@ -193,14 +191,12 @@ function updateSummary() {
   for (const report of state.reports.values()) {
     wardenCas += report.wardenCasualties || 0;
     colonialCas += report.colonialCasualties || 0;
-    maxDay = Math.max(maxDay, report.dayOfWar || 0);
   }
 
   const required = Math.max(0, (war.requiredVictoryTowns || 0) - scorched);
   const requiredDisplay = required || "—";
 
   els.warNumber.textContent = war.warNumber ? `#${war.warNumber}` : "—";
-  els.warDay.textContent = maxDay || "—";
   els.wardenVp.textContent = `${wardenVp} / ${requiredDisplay}`;
   els.colonialVp.textContent = `${colonialVp} / ${requiredDisplay}`;
   els.wardenCasualties.textContent = `${formatNumber(wardenCas)} casualties`;
@@ -222,27 +218,6 @@ function updateSummary() {
   } else {
     els.warDuration.textContent = "Awaiting conquest";
   }
-}
-
-function renderReportTable() {
-  const rows = state.maps
-    .map(name => ({
-      name,
-      displayName: prettyMapName(name),
-      report: state.reports.get(name) || {}
-    }))
-    .sort((a, b) => totalCasualties(b.report) - totalCasualties(a.report));
-
-  els.reportTableBody.innerHTML = rows.map(item => `
-    <tr>
-      <td>${item.displayName}</td>
-      <td>${item.report.dayOfWar ?? "—"}</td>
-      <td>${formatNumber(item.report.totalEnlistments || 0)}</td>
-      <td class="warden-text">${formatNumber(item.report.wardenCasualties || 0)}</td>
-      <td class="colonial-text">${formatNumber(item.report.colonialCasualties || 0)}</td>
-      <td>${formatNumber(totalCasualties(item.report))}</td>
-    </tr>
-  `).join("");
 }
 
 function closeRegion() {
@@ -282,9 +257,22 @@ async function refreshSelectedRegion() {
 }
 
 function updateDetailStats(report) {
-  els.detailDay.textContent = report.dayOfWar ?? "—";
-  els.detailWardenCas.textContent = formatNumber(report.wardenCasualties || 0);
-  els.detailColonialCas.textContent = formatNumber(report.colonialCasualties || 0);
+  const warden = report.wardenCasualties || 0;
+  const colonial = report.colonialCasualties || 0;
+  const total = warden + colonial;
+  const wardenPercent = total ? warden / total * 100 : 0;
+  const colonialPercent = total ? colonial / total * 100 : 0;
+  const war = state.war || {};
+  const startTime = Number(war.conquestStartTime || 0);
+  const endTime = Number(war.conquestEndTime || Date.now());
+  const elapsedHours = startTime && endTime > startTime
+    ? (endTime - startTime) / 3600000
+    : 0;
+  const hourlyCasualties = elapsedHours ? total / elapsedHours : 0;
+
+  els.detailWardenCas.textContent = `${formatNumber(warden)} (${wardenPercent.toFixed(1)}%)`;
+  els.detailColonialCas.textContent = `${formatNumber(colonial)} (${colonialPercent.toFixed(1)}%)`;
+  els.detailTotalCas.textContent = `${formatNumber(total)} (${elapsedHours ? `${formatNumber(Math.round(hourlyCasualties))}/hr` : "—/hr"})`;
   els.detailEnlistments.textContent = formatNumber(report.totalEnlistments || 0);
 }
 
