@@ -1,443 +1,154 @@
-const WORLD_TILE_IMAGES = new Map();
-const WORLD_TILE_IMAGE_OVERRIDES = {
-  MarbanHollow: "MapMarbanHollowHex.png"
-};
-const WORLD_BASE_ICON_TYPES = new Set([45, 46, 47, 56, 57, 58]);
-const DETAIL_HEX_POINTS = [
-  { x: 0, y: 0.5 },
-  { x: 0.249027, y: 0 },
-  { x: 0.750973, y: 0 },
-  { x: 1, y: 0.5 },
-  { x: 0.750973, y: 1 },
-  { x: 0.249027, y: 1 }
-];
-const DETAIL_VORONOI_BORDER_COLOR = "rgba(140, 125, 107, 0.349)";
-const DETAIL_VORONOI_BORDER_WIDTH = 2;
-const DETAIL_FRONTLINE_COLOR = "rgba(220, 62, 62, 0.95)";
-const DETAIL_FRONTLINE_WIDTH = 1.4;
-const DETAIL_OWNER_COLORS = {
-  WARDENS: "rgba(111, 155, 208, 0.2)",
-  COLONIALS: "rgba(115, 157, 111, 0.2)"
-};
-
-const originalRefreshOverviewDataForWorld = refreshOverviewData;
-refreshOverviewData = async function() {
-  await originalRefreshOverviewDataForWorld();
-  drawWorld();
-};
-
-async function loadWorldTiles() {
-  els.worldLoading.style.display = "block";
-  els.worldLoading.textContent = "Loading world map tiles…";
-
-  const entries = await Promise.all(WORLD_HEX_LAYOUT.map(async entry => {
-    const image = new Image();
-    image.src = worldTileImageUrl(entry.mapName);
-
-    try {
-      await image.decode();
-      return [entry.mapName, image];
-    } catch (error) {
-      console.warn(`Could not load world tile ${entry.mapName}`, error);
-      return [entry.mapName, null];
+/* One invalidation-driven renderer, with a viewport-sized terrain cache. */
+"use strict";
+(() => {
+  const app = window.OpenWarMap;
+  let frame = 0, worldDirty = true, detailDirty = true, terrainKey = "";
+  const terrain = document.createElement("canvas");
+  const metrics = { worldFrames: 0, detailFrames: 0, terrainBuilds: 0 };
+  function request(view) {
+    if (view !== "detail") worldDirty = true;
+    if (view !== "world") detailDirty = true;
+    if (!frame && !document.hidden) frame = requestAnimationFrame(flush);
+  }
+  function flush() {
+    frame = 0;
+    if (document.hidden) return;
+    if (app.selected) {
+      if (detailDirty) { detailDirty = false; app.drawDetail(); metrics.detailFrames++; }
+    } else if (worldDirty) { worldDirty = false; drawWorld(); metrics.worldFrames++; }
+  }
+  function size(canvas, width, height) {
+    // Cap both density and total pixels. DPR 3/4 phones do not need 4x map buffers.
+    const ratio = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4000000 / Math.max(1,width*height)));
+    const w = Math.max(1, Math.round(width * ratio)), h = Math.max(1, Math.round(height * ratio));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(w / width, 0, 0, h / height, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    return ctx;
+  }
+  function polygon(ctx, points, project) {
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i++) {
+      const p = project(points[i]);
+      if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
     }
-  }));
-
-  WORLD_TILE_IMAGES.clear();
-  for (const [mapName, image] of entries) {
+    ctx.closePath();
+  }
+  function lines(ctx, edges, project, color, width) {
+    ctx.beginPath();
+    for (const edge of edges) {
+      const a = project(edge.a), b = project(edge.b);
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+  function territories(ctx, geometry, project, fill, frontline, borderWidth = 1) {
+    if (fill) {
+      for (const cell of geometry.cells) {
+        const color = app.config.ownerColors[cell.owner];
+        if (!color) continue;
+        polygon(ctx, cell.polygon, project);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+      lines(ctx, geometry.edges.filter(edge => edge.cells.length > 1), project, "rgba(140,125,107,0.349)", borderWidth);
+    }
+    if (frontline) lines(ctx, geometry.edges.filter(app.geometry.opposing), project, "rgba(220,62,62,0.95)", 1.4);
+  }
+  function marker(ctx, item, x, y, size) {
+    const image = app.assets.icon(item.iconType, item.teamId);
     if (image) {
-      WORLD_TILE_IMAGES.set(mapName, image);
-    }
-  }
-
-  state.worldImage = WORLD_TILE_IMAGES.size ? { tileBased: true } : null;
-
-  if (WORLD_TILE_IMAGES.size) {
-    els.worldLoading.style.display = "none";
-  } else {
-    els.worldLoading.textContent = "Could not load local world map tiles.";
-  }
-
-  drawWorld();
-}
-
-loadWorldImage = loadWorldTiles;
-
-function worldTileImageUrl(mapName) {
-  if (WORLD_TILE_IMAGE_OVERRIDES[mapName]) {
-    return `img/${WORLD_TILE_IMAGE_OVERRIDES[mapName]}`;
-  }
-
-  let base = mapName.replace(/Hex$/i, "");
-  if (/^DeadLands$/i.test(base)) {
-    base = "Deadlands";
-  }
-  return `img/Map${base}Hex.png`;
-}
-
-drawWorld = function() {
-  if (!els.worldCanvas) {
-    return;
-  }
-
-  const canvas = els.worldCanvas;
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const worldScale = Math.min(
-    rect.width / WORLD_COORD_WIDTH,
-    rect.height / WORLD_COORD_HEIGHT
-  );
-  const sampleImage = WORLD_TILE_IMAGES.values().next().value;
-  const tileScreenWidth = WORLD_TILE_HALF_WIDTH * 2 * worldScale;
-  const sourceScale = sampleImage && tileScreenWidth > 0
-    ? sampleImage.naturalWidth / tileScreenWidth
-    : 1;
-  const backingScale = Math.max(1, Math.min(
-    4,
-    Math.max(2, dpr * 1.5),
-    sourceScale
-  ));
-
-  canvas.width = Math.max(1, Math.round(rect.width * backingScale));
-  canvas.height = Math.max(1, Math.round(rect.height * backingScale));
-
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(backingScale, 0, 0, backingScale, 0, 0);
-  ctx.clearRect(0, 0, rect.width, rect.height);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-
-  const width = WORLD_COORD_WIDTH * worldScale;
-  const height = WORLD_COORD_HEIGHT * worldScale;
-  const offsetX = (rect.width - width) / 2;
-  const offsetY = (rect.height - height) / 2;
-
-  for (const entry of WORLD_HEX_LAYOUT) {
-    const image = WORLD_TILE_IMAGES.get(entry.mapName);
-    if (!image) {
-      continue;
-    }
-    drawWorldTile(ctx, image, entry, worldScale, offsetX, offsetY);
-  }
-
-  state.worldHexHitboxes = WORLD_HEX_LAYOUT.map(entry => ({
-    ...entry,
-    screenPoints: entry.points.map((value, index) =>
-      index % 2 === 0
-        ? offsetX + value * worldScale
-        : offsetY + value * worldScale
-    )
-  }));
-};
-
-function drawWorldTile(ctx, image, entry, worldScale, offsetX, offsetY) {
-  const points = entry.points;
-  const bounds = entry.bounds;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(
-    offsetX + points[0] * worldScale,
-    offsetY + points[1] * worldScale
-  );
-
-  for (let i = 2; i < points.length; i += 2) {
-    ctx.lineTo(
-      offsetX + points[i] * worldScale,
-      offsetY + points[i + 1] * worldScale
-    );
-  }
-
-  ctx.closePath();
-  ctx.clip();
-  ctx.drawImage(
-    image,
-    offsetX + bounds.x * worldScale,
-    offsetY + bounds.y * worldScale,
-    bounds.width * worldScale,
-    bounds.height * worldScale
-  );
-  ctx.restore();
-}
-
-function drawWorldVictoryBases(ctx, worldScale, offsetX, offsetY) {
-  const layers = window.WORLD_OVERVIEW_LAYERS || {};
-
-  for (const hex of state.worldHexHitboxes || []) {
-    const dynamic = state.dynamic.get(hex.mapName);
-    if (!dynamic?.mapItems?.length) {
-      continue;
-    }
-
-    const bounds = hex.bounds;
-
-    for (const item of dynamic.mapItems) {
-      const isVictoryBase = (item.flags & FLAGS.VICTORY_BASE) !== 0;
-      const isTownOrRelicBase = WORLD_BASE_ICON_TYPES.has(item.iconType);
-      if (!isVictoryBase && !isTownOrRelicBase) {
-        continue;
-      }
-      if (isVictoryBase && layers.victoryBases === false) {
-        continue;
-      }
-      if (!isVictoryBase && layers.otherBases === false) {
-        continue;
-      }
-
-      const worldX = bounds.x + item.x * bounds.width;
-      const worldY = bounds.y + item.y * bounds.height;
-      const x = offsetX + worldX * worldScale;
-      const y = offsetY + worldY * worldScale;
-      const radius = isVictoryBase ? 4.5 : 2.5;
-
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = teamColor(item.teamId);
-      ctx.fill();
-      ctx.lineWidth = isVictoryBase ? 1.5 : 0.9;
-      ctx.strokeStyle = (item.flags & FLAGS.SCORCHED) !== 0
-        ? "#d7ae58"
-        : "rgba(8, 10, 13, 0.9)";
-      ctx.stroke();
-    }
-  }
-}
-
-drawRegion = function() {
-  if (!state.selectedMap || !state.regionImage || !els.detailCanvas) {
-    return;
-  }
-
-  const staticData = state.static.get(state.selectedMap) || {};
-  const dynamicData = state.dynamic.get(state.selectedMap) || {};
-  const canvas = els.detailCanvas;
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-
-  canvas.width = Math.max(1, Math.round(rect.width * dpr));
-  canvas.height = Math.max(1, Math.round(rect.height * dpr));
-
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, rect.width, rect.height);
-
-  const image = state.regionImage;
-  const scale = Math.min(rect.width / image.width, rect.height / image.height);
-  const mapWidth = image.width * scale;
-  const mapHeight = image.height * scale;
-  const mapX = (rect.width - mapWidth) / 2;
-  const mapY = (rect.height - mapHeight) / 2;
-
-  ctx.drawImage(image, mapX, mapY, mapWidth, mapHeight);
-  drawDetailVoronoi(
-    ctx,
-    staticData.mapTextItems || [],
-    dynamicData.mapItems || [],
-    mapX,
-    mapY,
-    mapWidth,
-    mapHeight
-  );
-
-  state.markerHitboxes = [];
-  const merged = [
-    ...(staticData.mapItems || []),
-    ...(dynamicData.mapItems || [])
-  ];
-  const seen = new Set();
-
-  for (const item of merged) {
-    const key = `${item.iconType}:${item.x.toFixed(5)}:${item.y.toFixed(5)}:${item.teamId}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-
-    const category = ICONS[item.iconType]?.[2] || "structure";
-    if (category === "resource" && !els.showResources.checked) {
-      continue;
-    }
-    if (category !== "resource" && !els.showStructures.checked) {
-      continue;
-    }
-    if (item.teamId === "NONE" && !els.showNeutral.checked) {
-      continue;
-    }
-
-    drawMapItem(ctx, item, mapX, mapY, mapWidth, mapHeight);
-  }
-
-  if (els.showLabels.checked) {
-    drawMapLabels(ctx, staticData.mapTextItems || [], mapX, mapY, mapWidth, mapHeight);
-  }
-};
-
-function drawDetailVoronoi(ctx, labels, mapItems, mapX, mapY, mapWidth, mapHeight) {
-  const sites = labels
-    .filter(label =>
-      label.mapMarkerType === "Major" &&
-      Number.isFinite(label.x) &&
-      Number.isFinite(label.y)
-    )
-    .map(label => ({
-      x: mapX + label.x * mapWidth,
-      y: mapY + label.y * mapHeight
-    }));
-
-  if (sites.length < 2) {
-    return;
-  }
-
-  const hexPolygon = DETAIL_HEX_POINTS.map(point => ({
-    x: mapX + point.x * mapWidth,
-    y: mapY + point.y * mapHeight
-  }));
-  const bases = mapItems
-    .filter(item =>
-      WORLD_BASE_ICON_TYPES.has(item.iconType) &&
-      DETAIL_OWNER_COLORS[item.teamId] &&
-      Number.isFinite(item.x) &&
-      Number.isFinite(item.y)
-    )
-    .map(item => ({
-      x: mapX + item.x * mapWidth,
-      y: mapY + item.y * mapHeight,
-      teamId: item.teamId
-    }));
-  const segments = new Map();
-
-  for (let i = 0; i < sites.length; i++) {
-    let cell = hexPolygon.map(point => ({ ...point }));
-
-    for (let j = 0; j < sites.length && cell.length; j++) {
-      if (i === j) {
-        continue;
-      }
-      cell = clipPolygonToVoronoiHalfPlane(cell, sites[i], sites[j]);
-    }
-
-    if (cell.length < 3) {
-      continue;
-    }
-
-    const owner = getVoronoiCellOwner(cell, sites[i], bases);
-    fillDetailVoronoiCell(ctx, cell, owner);
-    collectDetailVoronoiSegments(cell, segments, owner);
-  }
-
-  ctx.save();
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.lineWidth = DETAIL_VORONOI_BORDER_WIDTH;
-  ctx.strokeStyle = DETAIL_VORONOI_BORDER_COLOR;
-  ctx.beginPath();
-
-  for (const segment of segments.values()) {
-    if (segment.count < 2) {
-      continue;
-    }
-    ctx.moveTo(segment.a.x, segment.a.y);
-    ctx.lineTo(segment.b.x, segment.b.y);
-  }
-
-  ctx.stroke();
-  ctx.restore();
-
-  if (document.getElementById("showFrontline")?.checked) {
-    drawDetailFrontlines(ctx, segments);
-  }
-}
-
-function fillDetailVoronoiCell(ctx, cell, owner) {
-  const fillStyle = DETAIL_OWNER_COLORS[owner];
-  if (!fillStyle) {
-    return;
-  }
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cell[0].x, cell[0].y);
-  for (let i = 1; i < cell.length; i++) {
-    ctx.lineTo(cell[i].x, cell[i].y);
-  }
-  ctx.closePath();
-  ctx.fillStyle = fillStyle;
-  ctx.fill();
-  ctx.restore();
-}
-
-function collectDetailVoronoiSegments(cell, segments, owner) {
-  for (let i = 0; i < cell.length; i++) {
-    const a = cell[i];
-    const b = cell[(i + 1) % cell.length];
-    if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-5) {
-      continue;
-    }
-
-    const first = `${a.x.toFixed(3)},${a.y.toFixed(3)}`;
-    const second = `${b.x.toFixed(3)},${b.y.toFixed(3)}`;
-    const key = first < second ? `${first}|${second}` : `${second}|${first}`;
-    const existing = segments.get(key);
-
-    if (existing) {
-      existing.count++;
-      if (owner) {
-        existing.owners.add(owner);
-      }
+      ctx.globalAlpha = item.teamId === "NONE" ? 0.76 : 1;
+      ctx.drawImage(image, x-size/2, y-size/2, size, size);
+      ctx.globalAlpha = 1;
     } else {
-      segments.set(key, {
-        a: { ...a },
-        b: { ...b },
-        count: 1,
-        owners: new Set(owner ? [owner] : [])
-      });
+      ctx.font = "600 " + Math.max(4.5, size*0.5) + "px Jost, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.85)";
+      ctx.strokeText(String(item.iconType), x, y);
+      ctx.fillStyle = app.config.colors[item.teamId] || app.config.colors.NONE;
+      ctx.fillText(String(item.iconType), x, y);
     }
   }
-}
-
-function drawDetailFrontlines(ctx, segments) {
-  ctx.save();
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.lineWidth = DETAIL_FRONTLINE_WIDTH;
-  ctx.strokeStyle = DETAIL_FRONTLINE_COLOR;
-  ctx.beginPath();
-
-  for (const segment of segments.values()) {
-    if (
-      segment.count < 2 ||
-      !segment.owners.has("WARDENS") ||
-      !segment.owners.has("COLONIALS")
-    ) {
-      continue;
+  function drawWorld() {
+    const canvas = app.ui.worldCanvas, rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const ctx = size(canvas, rect.width, rect.height);
+    const scale = Math.min(rect.width/app.layout.width, rect.height/app.layout.height);
+    const offsetX = (rect.width-app.layout.width*scale)/2, offsetY = (rect.height-app.layout.height*scale)/2;
+    const project = p => ({ x: offsetX+p.x*scale, y: offsetY+p.y*scale });
+    app.worldView = { scale, offsetX, offsetY };
+    const key = canvas.width + ":" + canvas.height + ":" + app.assets.revision;
+    if (key !== terrainKey) {
+      terrain.width = canvas.width; terrain.height = canvas.height;
+      const tc = terrain.getContext("2d");
+      tc.setTransform(canvas.width/rect.width, 0, 0, canvas.height/rect.height, 0, 0);
+      for (const tile of app.layout.tiles) {
+        const image = app.assets.tiles.get(tile.mapName);
+        if (!image) continue;
+        tc.save();
+        polygon(tc, tile.polygon, project);
+        tc.clip();
+        const p = project(tile.bounds);
+        tc.drawImage(image, p.x, p.y, tile.bounds.width*scale, tile.bounds.height*scale);
+        tc.restore();
+      }
+      terrainKey = key;
+      metrics.terrainBuilds++;
     }
-
-    ctx.moveTo(segment.a.x, segment.a.y);
-    ctx.lineTo(segment.b.x, segment.b.y);
+    ctx.drawImage(terrain, 0, 0, rect.width, rect.height);
+    let maxCasualties = 0;
+    if (app.layers.casualtyHeatmap) for (const region of app.regions.values()) maxCasualties = Math.max(maxCasualties, app.casualties(region.report));
+    const entries = [];
+    for (const tile of app.layout.tiles) {
+      const region = app.regions.get(tile.mapName);
+      if (maxCasualties && region) {
+        const count = app.casualties(region.report);
+        if (count) {
+          polygon(ctx, tile.polygon, project);
+          ctx.fillStyle = "rgba(220,42,42," + (0.08+Math.sqrt(count/maxCasualties)*0.42) + ")";
+          ctx.fill();
+        }
+      }
+      if (region && (app.layers.territoryOwnership || app.layers.frontline)) {
+        const geometry = app.geometry.get(region, tile);
+        entries.push({ tile, region, geometry });
+        territories(ctx, geometry, project, app.layers.territoryOwnership, false);
+      }
+      polygon(ctx, tile.polygon, project);
+      ctx.strokeStyle = "rgba(140,125,107,0.349)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    if (app.layers.frontline) lines(ctx, app.geometry.worldFrontlines(entries), project, "rgba(220,62,62,0.95)", 1.4);
+    for (const tile of app.layout.tiles) {
+      if (app.layers.regionNames) {
+        const p = project(tile);
+        ctx.font = "400 11.5px Jost, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.lineWidth = 0.5; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
+        ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
+      }
+      const region = app.regions.get(tile.mapName);
+      if (!region) continue;
+      for (const item of region.items) {
+        const victory = !!(item.flags & 1), base = app.config.baseTypes.has(item.iconType);
+        const p = project({ x: tile.bounds.x+item.x*tile.bounds.width, y: tile.bounds.y+item.y*tile.bounds.height });
+        if (victory || base) {
+          if (!(victory ? app.layers.victoryBases : app.layers.otherBases)) continue;
+          ctx.beginPath(); ctx.arc(p.x,p.y,victory?4.5:2.5,0,Math.PI*2);
+          ctx.fillStyle = app.config.colors[item.teamId] || app.config.colors.NONE; ctx.fill();
+          ctx.strokeStyle = item.flags & 16 ? "#d7ae58" : "rgba(8,10,13,0.9)";
+          ctx.lineWidth = victory?1.5:0.9; ctx.stroke();
+        } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9);
+      }
+    }
   }
-
-  ctx.stroke();
-  ctx.restore();
-}
-
-drawMapLabels = function(ctx, labels, mapX, mapY, mapWidth, mapHeight) {
-  ctx.save();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.strokeStyle = "rgb(192, 181, 149)";
-  ctx.fillStyle = "rgb(71, 87, 85)";
-  ctx.lineWidth = 0.5;
-
-  for (const label of labels) {
-    const x = mapX + label.x * mapWidth;
-    const y = mapY + label.y * mapHeight;
-    const major = label.mapMarkerType === "Major";
-    const fontSize = major ? 18.5 : 12.5;
-
-    ctx.font = `400 ${fontSize}px Jost, sans-serif`;
-    ctx.strokeText(label.text, x, y);
-    ctx.fillText(label.text, x, y);
-  }
-
-  ctx.restore();
-};
+  app.render = { request, size, polygon, lines, territories, marker, metrics,
+    releaseDetail() {
+      app.ui.detailCanvas.width = 1; app.ui.detailCanvas.height = 1;
+      app.detailHits = [];
+    }
+  };
+})();

@@ -1,4 +1,61 @@
-const MAP_ICON_ENUM = {
+/* WarAPI enums and local asset metadata; kept independent of rendering. */
+"use strict";
+(() => {
+  const app = window.OpenWarMap;
+  app.config.icons = {
+  5: ["Static Base T1", "MapIconStaticBase1.png", "structure"],
+  6: ["Static Base T2", "MapIconStaticBase2.png", "structure"],
+  7: ["Static Base T3", "MapIconStaticBase3.png", "structure"],
+  8: ["Forward Base", "MapIconForwardBase1.png", "structure"],
+  11: ["Hospital", "MapIconHospital.png", "structure"],
+  12: ["Vehicle Factory", "MapIconVehicle.png", "structure"],
+  13: ["Armory", "MapIconArmory.png", "structure"],
+  15: ["Workshop", "MapIconWorkshop.png", "structure"],
+  17: ["Refinery", "MapIconManufacturing.png", "structure"],
+  18: ["Shipyard", "Shipyard.png", "structure"],
+  19: ["Engineering Center", "MapIconTechCenter.png", "structure"],
+  20: ["Salvage Field", "SalvageMapIcon.png", "resource"],
+  21: ["Component Field", "MapIconComponents.png", "resource"],
+  22: ["Fuel Field", "MapIconFuel.png", "resource"],
+  23: ["Sulfur Field", "MapIconSulfur.png", "resource"],
+  27: ["Keep", "MapIconsKeep.png", "structure"],
+  28: ["Observation Tower", "MapIconObservationTower.png", "structure"],
+  29: ["Fort", "MapIconFort.png", "structure"],
+  32: ["Sulfur Mine", "MapIconSulfurMine.png", "resource"],
+  33: ["Storage Facility", "MapIconStorageFacility.png", "structure"],
+  34: ["Factory", "MapIconFactory.png", "structure"],
+  35: ["Garrison Station", "MapIconsFortGarrisonStation.png", "structure"],
+  37: ["Rocket Site", "MapIconRocketSite.png", "structure"],
+  38: ["Salvage Mine", "MapIconScrapMine.png", "resource"],
+  39: ["Construction Yard", "MapIconConstructionYard.png", "structure"],
+  40: ["Component Mine", "MapIconComponentMine.png", "resource"],
+  45: ["Relic Base", "MapIconRelicBase.png", "structure"],
+  46: ["Relic Base", "MapIconRelicBase.png", "structure"],
+  47: ["Relic Base", "MapIconRelicBase.png", "structure"],
+  51: ["Mass Production Factory", "MapIconMassProductionFactory.png", "structure"],
+  52: ["Seaport", "MapIconSeaport.png", "structure"],
+  53: ["Coastal Gun", "MapIconCoastalGun.png", "structure"],
+  54: ["Soul Factory", "MapIconSoulFactory.png", "structure"],
+  56: ["Town Base T1", "MapIconTownBaseTier1.png", "structure"],
+  57: ["Town Base T2", "MapIconTownBaseTier2.png", "structure"],
+  58: ["Town Base T3", "MapIconTownBaseTier3.png", "structure"],
+  59: ["Storm Cannon", "MapIconStormcannon.png", "structure"],
+  60: ["Intel Center", "MapIconIntelcenter.png", "structure"],
+  61: ["Coal Field", "MapIconCoal.png", "resource"],
+  62: ["Oil Field", "MapIconFuel.png", "resource"],
+  70: ["Rocket Target", "MapIconRocketTarget.png", "structure"],
+  71: ["Rocket Ground Zero", "MapIconRocketGroundZero.png", "structure"],
+  72: ["Rocket Site With Rocket", "MapIconRocketSiteWithRocket.png", "structure"],
+  75: ["Facility Mine Oil Rig", "MapIconFacilityMineOilRig.png", "resource"],
+  83: ["Weather Station", "MapIconWeatherStation.png", "structure"],
+  84: ["Mortar House", "MapIconMortarHouse.png", "structure"],
+  88: ["Aircraft Depot", "MapIconAircraftDepot.png", "structure"],
+  89: ["Aircraft Factory", "MapIconAircraftFactory.png", "structure"],
+  91: ["Aircraft Runway T1", "MapIconAircraftRunwayT1.png", "structure"],
+  92: ["Aircraft Runway T2", "MapIconAircraftRunwayT2.png", "structure"],
+  97: ["Anti Air Gun", "MapIconAAGunAI.png", "structure"]
+};
+  app.config.enums = {
   0: "None",
   1: "HomeTown",
   2: "TownHall",
@@ -99,38 +156,9 @@ const MAP_ICON_ENUM = {
   97: "AntiAirGun",
   98: "IntelArea"
 };
-
-const RESOURCE_ICON_TYPES = new Set([
-  20, 21, 22, 23, 31, 32, 38, 40, 41, 61, 62, 75
-]);
-
-for (const [idText, enumName] of Object.entries(MAP_ICON_ENUM)) {
-  const id = Number(idText);
-  if (id === 0 || ICONS[id]) {
-    continue;
-  }
-
-  ICONS[id] = [enumName, null, RESOURCE_ICON_TYPES.has(id) ? "resource" : "structure"];
-}
-
-drawMapLabels = function(ctx, labels, mapX, mapY, mapWidth, mapHeight) {
-  ctx.save();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  for (const label of labels) {
-    const x = mapX + label.x * mapWidth;
-    const y = mapY + label.y * mapHeight;
-    const major = label.mapMarkerType === "Major";
-    const fontSize = major ? 13 : 10;
-
-    ctx.font = `${major ? 600 : 500} ${fontSize}px Jost, sans-serif`;
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = "rgb(192, 181, 149)";
-    ctx.strokeText(label.text, x, y);
-    ctx.fillStyle = "rgb(71, 87, 85)";
-    ctx.fillText(label.text, x, y);
-  }
-
-  ctx.restore();
-};
+  app.config.resourceTypes = new Set([20,21,22,23,31,32,38,40,41,61,62,75]);
+  app.config.baseTypes = new Set([45,46,47,56,57,58]);
+  app.config.colors = { WARDENS: "#6f9bd0", COLONIALS: "#739d6f", NONE: "#aaa99f" };
+  app.config.ownerColors = { WARDENS: "rgba(111,155,208,0.2)", COLONIALS: "rgba(115,157,111,0.2)" };
+  app.config.iconName = type => (app.config.icons[type]?.[0] || app.config.enums[type] || "Icon " + type).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])(\d+)/g, "$1 $2");
+})();

@@ -1,373 +1,259 @@
-const SHARDS = {
-  "1": "https://war-service-live.foxholeservices.com/api",
-  "2": "https://war-service-live-2.foxholeservices.com/api",
-  "3": "https://war-service-live-3.foxholeservices.com/api",
-  "dev": "https://war-service-dev.foxholeservices.com/api"
-};
-
-const FLAGS = {
-  VICTORY_BASE: 0x01,
-  BUILD_SITE: 0x04,
-  SCORCHED: 0x10,
-  TOWN_CLAIMED: 0x20
-};
-
-const ICONS = {};
-
-const state = {
-  shard: "1",
-  maps: [],
-  war: null,
-  reports: new Map(),
-  dynamic: new Map(),
-  static: new Map(),
-  selectedMap: null,
-  worldImage: null,
-  regionImage: null,
-  iconImages: new Map(),
-  markerHitboxes: [],
-  regionTimer: null
-};
-
-const els = {};
-
-let openRegion;
-let drawWorld;
-let drawRegion;
-let drawMapItem;
-let drawMapLabels;
-let preloadVisibleIcons;
-let loadWorldImage;
-
-document.addEventListener("DOMContentLoaded", init);
-
-function init() {
-  [
-    "shardSelect", "refreshButton", "connectionStatus", "warNumber", "warPhase",
-    "warDuration", "wardenVp", "colonialVp", "wardenCasualties", "colonialCasualties",
-    "lastRefresh", "worldCanvas", "worldLoading", "detailPanel", "closeDetail",
-    "detailTitle", "detailSubtitle", "detailTotalCas", "detailWardenCas",
-    "detailColonialCas", "detailEnlistments", "detailUpdated", "detailCanvas",
-    "detailLoading", "showLabels", "showResources", "showStructures", "showNeutral",
-    "mapTooltip"
-  ].forEach(id => els[id] = document.getElementById(id));
-
-  els.shardSelect.addEventListener("change", async () => {
-    state.shard = els.shardSelect.value;
-    resetState();
-    await refreshAll();
-  });
-
-  els.refreshButton.addEventListener("click", refreshAll);
-  els.closeDetail.addEventListener("click", closeRegion);
-
-  [els.showLabels, els.showResources, els.showStructures, els.showNeutral]
-    .forEach(input => input.addEventListener("change", drawRegion));
-
-  window.addEventListener("resize", () => {
-    drawWorld();
-    drawRegion();
-  });
-
-  els.detailCanvas.addEventListener("mousemove", handleMapPointer);
-  els.detailCanvas.addEventListener("mouseleave", () => els.mapTooltip.classList.add("hidden"));
-
-  loadWorldImage();
-  refreshAll();
-  window.setInterval(refreshOverviewData, 60000);
-}
-
-function apiBase() {
-  return SHARDS[state.shard];
-}
-
-async function apiFetch(path) {
-  const response = await fetch(`${apiBase()}${path}`, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
-
-async function refreshAll() {
-  setStatus("loading", "Refreshing…");
-
-  try {
-    const [war, maps] = await Promise.all([
-      apiFetch("/worldconquest/war"),
-      apiFetch("/worldconquest/maps")
-    ]);
-
-    state.war = war;
-    state.maps = maps.filter(name => !/^HomeRegion[CW]$/i.test(name));
-    await refreshOverviewData();
-    setStatus("online", "Live");
-  } catch (error) {
-    console.error(error);
-    setStatus("error", "API error");
-  }
-}
-
-async function refreshOverviewData() {
-  if (!state.maps.length) {
-    return;
-  }
-
-  try {
-    state.war = await apiFetch("/worldconquest/war");
-
-    const reportEntries = await mapWithConcurrency(state.maps, 6, async mapName => {
-      try {
-        return [mapName, await apiFetch(`/worldconquest/warReport/${encodeURIComponent(mapName)}`)];
-      } catch {
-        return [mapName, null];
-      }
-    });
-
-    reportEntries.forEach(([name, report]) => {
-      if (report) {
-        state.reports.set(name, report);
-      }
-    });
-
-    const dynamicEntries = await mapWithConcurrency(state.maps, 6, async mapName => {
-      try {
-        return [mapName, await apiFetch(`/worldconquest/maps/${encodeURIComponent(mapName)}/dynamic/public`)];
-      } catch {
-        return [mapName, null];
-      }
-    });
-
-    dynamicEntries.forEach(([name, data]) => {
-      if (data) {
-        state.dynamic.set(name, data);
-      }
-    });
-
-    updateSummary();
-    els.lastRefresh.textContent = `Updated ${new Date().toLocaleTimeString()}`;
-    setStatus("online", "Live");
-  } catch (error) {
-    console.error(error);
-    setStatus("error", "Partial/API error");
-  }
-}
-
-async function mapWithConcurrency(items, limit, worker) {
-  const result = new Array(items.length);
-  let next = 0;
-
-  async function run() {
-    while (true) {
-      const index = next++;
-      if (index >= items.length) {
-        break;
-      }
-      result[index] = await worker(items[index], index);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
-  return result;
-}
-
-function updateSummary() {
-  const war = state.war || {};
-  let wardenVp = 0;
-  let colonialVp = 0;
-  let scorched = 0;
-  let wardenCas = 0;
-  let colonialCas = 0;
-
-  for (const data of state.dynamic.values()) {
-    for (const item of data.mapItems || []) {
-      if ((item.flags & FLAGS.VICTORY_BASE) !== 0) {
-        if (item.teamId === "WARDENS") wardenVp++;
-        if (item.teamId === "COLONIALS") colonialVp++;
-        if ((item.flags & FLAGS.SCORCHED) !== 0) scorched++;
-      }
-    }
-  }
-
-  for (const report of state.reports.values()) {
-    wardenCas += report.wardenCasualties || 0;
-    colonialCas += report.colonialCasualties || 0;
-  }
-
-  const required = Math.max(0, (war.requiredVictoryTowns || 0) - scorched);
-  const requiredDisplay = required || "—";
-
-  els.warNumber.textContent = war.warNumber ? `#${war.warNumber}` : "—";
-  els.wardenVp.textContent = `${wardenVp} / ${requiredDisplay}`;
-  els.colonialVp.textContent = `${colonialVp} / ${requiredDisplay}`;
-  els.wardenCasualties.textContent = `${formatNumber(wardenCas)} casualties`;
-  els.colonialCasualties.textContent = `${formatNumber(colonialCas)} casualties`;
-
-  if (war.conquestEndTime) {
-    els.warPhase.textContent = `Ended ${new Date(war.conquestEndTime).toLocaleString()}`;
-  } else if (war.resistanceStartTime) {
-    els.warPhase.textContent = "Resistance";
-  } else {
-    els.warPhase.textContent = "World Conquest";
-  }
-
-  if (war.conquestStartTime) {
-    const elapsed = Date.now() - war.conquestStartTime;
-    const days = Math.floor(elapsed / 86400000);
-    const hours = Math.floor((elapsed % 86400000) / 3600000);
-    els.warDuration.textContent = `${days}d ${hours}h elapsed`;
-  } else {
-    els.warDuration.textContent = "Awaiting conquest";
-  }
-}
-
-function closeRegion() {
-  state.selectedMap = null;
-  state.regionImage = null;
-  state.markerHitboxes = [];
-  clearInterval(state.regionTimer);
-  state.regionTimer = null;
-
-  if (els.detailPanel) {
-    els.detailPanel.classList.add("hidden");
-  }
-}
-
-async function refreshSelectedRegion() {
-  if (!state.selectedMap) {
-    return;
-  }
-
-  const mapName = state.selectedMap;
-
-  try {
-    const [dynamic, report] = await Promise.all([
-      apiFetch(`/worldconquest/maps/${encodeURIComponent(mapName)}/dynamic/public`),
-      apiFetch(`/worldconquest/warReport/${encodeURIComponent(mapName)}`)
-    ]);
-
-    state.dynamic.set(mapName, dynamic);
-    state.reports.set(mapName, report);
-    updateDetailStats(report);
-    await preloadVisibleIcons(mapName);
-    drawRegion();
-    els.detailUpdated.textContent = `Updated ${new Date().toLocaleTimeString()}`;
-  } catch (error) {
-    console.warn("Selected region refresh failed", error);
-  }
-}
-
-function updateDetailStats(report) {
-  const warden = report.wardenCasualties || 0;
-  const colonial = report.colonialCasualties || 0;
-  const total = warden + colonial;
-  const wardenPercent = total ? warden / total * 100 : 0;
-  const colonialPercent = total ? colonial / total * 100 : 0;
-  const war = state.war || {};
-  const startTime = Number(war.conquestStartTime || 0);
-  const endTime = Number(war.conquestEndTime || Date.now());
-  const elapsedHours = startTime && endTime > startTime
-    ? (endTime - startTime) / 3600000
-    : 0;
-  const hourlyCasualties = elapsedHours ? total / elapsedHours : 0;
-
-  els.detailWardenCas.textContent = `${formatNumber(warden)} (${wardenPercent.toFixed(1)}%)`;
-  els.detailColonialCas.textContent = `${formatNumber(colonial)} (${colonialPercent.toFixed(1)}%)`;
-  els.detailTotalCas.textContent = `${formatNumber(total)} (${elapsedHours ? `${formatNumber(Math.round(hourlyCasualties))}/hr` : "—/hr"})`;
-  els.detailEnlistments.textContent = formatNumber(report.totalEnlistments || 0);
-}
-
-function handleMapPointer(event) {
-  if (!state.markerHitboxes.length) {
-    els.mapTooltip.classList.add("hidden");
-    return;
-  }
-
-  const canvasRect = els.detailCanvas.getBoundingClientRect();
-  const viewportRect = els.detailCanvas.parentElement.getBoundingClientRect();
-  const x = event.clientX - canvasRect.left;
-  const y = event.clientY - canvasRect.top;
-
-  const hit = [...state.markerHitboxes]
-    .reverse()
-    .find(marker => Math.hypot(x - marker.x, y - marker.y) <= marker.r);
-
-  if (!hit) {
-    els.mapTooltip.classList.add("hidden");
-    return;
-  }
-
-  const flags = [];
-  if ((hit.item.flags & FLAGS.VICTORY_BASE) !== 0) flags.push("Victory Base");
-  if ((hit.item.flags & FLAGS.BUILD_SITE) !== 0) flags.push("Build Site");
-  if ((hit.item.flags & FLAGS.SCORCHED) !== 0) flags.push("Scorched");
-  if ((hit.item.flags & FLAGS.TOWN_CLAIMED) !== 0) flags.push("Town Claimed");
-
-  els.mapTooltip.innerHTML = `
-    <strong>${hit.name}</strong><br>
-    <span style="color:${teamColor(hit.item.teamId)}">${prettyTeam(hit.item.teamId)}</span>
-    ${flags.length ? `<br><span class="muted">${flags.join(" · ")}</span>` : ""}
-  `;
-
-  els.mapTooltip.classList.remove("hidden");
-  els.mapTooltip.style.left = `${event.clientX - viewportRect.left + 14}px`;
-  els.mapTooltip.style.top = `${event.clientY - viewportRect.top + 14}px`;
-}
-
-function prettyMapName(mapName) {
-  const aliases = {
-    DeadLandsHex: "Deadlands",
-    MooringCountyHex: "The Moors",
-    LinnMercyHex: "The Linn of Mercy",
-    OarbreakerHex: "Oarbreaker Isles",
-    FishermansRowHex: "Fisherman's Row",
-    CallahansPassageHex: "Callahan's Passage",
-    CallumsCapeHex: "Callum's Cape",
-    KingsCageHex: "King's Cage",
-    AllodsBightHex: "Allod's Bight",
-    LochMorHex: "Loch Mór"
+/* OpenWarMap application and data pipeline. Classic scripts preserve index.html. */
+"use strict";
+window.OpenWarMap = (() => {
+  const app = {
+    config: {}, ui: {}, regions: new Map(), maps: [], war: null,
+    selected: null, generation: 0, selection: 0, controller: new AbortController(),
+    layers: { regionNames: false, victoryBases: true, otherBases: true,
+      casualtyHeatmap: false, territoryOwnership: true, frontline: true },
+    worldIcons: new Set(), hiddenIcons: new Set(), revision: 0
   };
+  const endpoints = {
+    "1": "https://war-service-live.foxholeservices.com/api",
+    "2": "https://war-service-live-2.foxholeservices.com/api",
+    "3": "https://war-service-live-3.foxholeservices.com/api",
+    dev: "https://war-service-dev.foxholeservices.com/api"
+  };
+  let shard = "1", active = 0, overview = null, detail = null;
+  let overviewTimer, detailTimer;
+  const queue = [], responses = new Map(), pending = new Map();
+  const abortError = () => new DOMException("Request cancelled", "AbortError");
+  const current = generation => generation === app.generation && !app.controller.signal.aborted;
+  app.isCurrent = current;
 
-  if (aliases[mapName]) {
-    return aliases[mapName];
+  // A single network budget covers overview, detail and manual refreshes.
+  function pump() {
+    while (active < 6 && queue.length) {
+      const task = queue.shift();
+      if (!current(task.generation)) { task.reject(abortError()); continue; }
+      active++;
+      task.run().then(task.resolve, task.reject).finally(() => { active--; pump(); });
+    }
+  }
+  function request(path, ttl = 10000) {
+    const key = shard + path;
+    const cached = responses.get(key);
+    if (cached && Date.now() - cached.time < ttl) return Promise.resolve(cached.data);
+    if (pending.has(key)) {
+      // Opening a region promotes its existing queued work instead of duplicating it.
+      const index = app.selected ? queue.findIndex(task => task.key === key) : -1;
+      if (index > 0) queue.unshift(queue.splice(index, 1)[0]);
+      return pending.get(key);
+    }
+    const generation = app.generation, base = endpoints[shard], signal = app.controller.signal;
+    const promise = new Promise((resolve, reject) => {
+      queue.push({ key, generation, resolve, reject, run: async () => {
+        const controller = new AbortController();
+        const cancel = () => controller.abort();
+        signal.addEventListener("abort", cancel, { once: true });
+        const timeout = setTimeout(cancel, 15000);
+        try {
+          const response = await fetch(base + path, { signal: controller.signal, cache: "no-cache" });
+          if (!response.ok) throw new Error("WarAPI HTTP " + response.status);
+          const data = await response.json();
+          if (!current(generation)) throw abortError();
+          responses.set(key, { data, time: Date.now() });
+          return data;
+        } finally {
+          clearTimeout(timeout);
+          signal.removeEventListener("abort", cancel);
+        }
+      } });
+      pump();
+    });
+    pending.set(key, promise);
+    promise.finally(() => { if (pending.get(key) === promise) pending.delete(key); }).catch(() => {});
+    return promise;
+  }
+  app.request = request;
+  app.region = name => {
+    if (!app.regions.has(name)) app.regions.set(name, {
+      name, static: null, dynamic: null, report: null, items: [], labels: [], bases: [],
+      geometry: null, geometryKey: "", ownerKey: "", updated: 0
+    });
+    return app.regions.get(name);
+  };
+  const validPoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+  app.validPoint = validPoint;
+  function indexRegion(region) {
+    const items = new Map();
+    // Public dynamic ownership takes precedence over matching static markers.
+    for (const item of [...(region.dynamic?.mapItems || []), ...(region.static?.mapItems || [])]) {
+      if (!validPoint(item) || !Number.isInteger(item.iconType) || item.iconType === 0) continue;
+      const key = item.iconType + ":" + item.x.toFixed(5) + ":" + item.y.toFixed(5);
+      if (!items.has(key)) items.set(key, item);
+    }
+    region.items = [...items.values()];
+    region.labels = (region.static?.mapTextItems || []).filter(validPoint);
+    region.bases = (region.dynamic?.mapItems || []).filter(item =>
+      validPoint(item) && app.config.baseTypes.has(item.iconType));
+  }
+  app.indexRegion = indexRegion;
+
+  async function loadRegion(name, generation) {
+    const region = app.region(name), encoded = encodeURIComponent(name);
+    const jobs = [
+      ["dynamic", "/worldconquest/maps/" + encoded + "/dynamic/public"],
+      ["report", "/worldconquest/warReport/" + encoded]
+    ];
+    if (!region.static) jobs.push(["static", "/worldconquest/maps/" + encoded + "/static"]);
+    const results = await Promise.allSettled(jobs.map(async ([kind, path]) => {
+      const data = await request(path, kind === "static" ? Infinity : 10000);
+      if (!data || typeof data !== "object" || Array.isArray(data) ||
+          (kind !== "report" && (!Array.isArray(data.mapItems) ||
+          (kind === "static" && !Array.isArray(data.mapTextItems))))) {
+        responses.delete(shard + path);
+        throw new Error("Invalid " + kind + " data");
+      }
+      if (current(generation)) region[kind] = data;
+    }));
+    if (!current(generation)) return false;
+    indexRegion(region);
+    const complete = results.every(result => result.status === "fulfilled");
+    if (complete) region.updated = Date.now();
+    return complete;
   }
 
-  return mapName
-    .replace(/Hex$/i, "")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
-}
-
-function teamColor(team) {
-  if (team === "WARDENS") return "#6f9bd0";
-  if (team === "COLONIALS") return "#739d6f";
-  return "#aaa99f";
-}
-
-function prettyTeam(team) {
-  if (team === "WARDENS") return "Wardens";
-  if (team === "COLONIALS") return "Colonials";
-  return "Neutral";
-}
-
-function totalCasualties(report) {
-  return (report.wardenCasualties || 0) + (report.colonialCasualties || 0);
-}
-
-function formatNumber(value) {
-  return Number(value || 0).toLocaleString();
-}
-
-function setStatus(type, text) {
-  els.connectionStatus.className = `status-pill is-${type}`;
-  els.connectionStatus.textContent = text;
-}
-
-function resetState() {
-  state.maps = [];
-  state.war = null;
-  state.reports.clear();
-  state.dynamic.clear();
-  state.static.clear();
-  closeRegion();
-}
+  function scheduleOverview(delay = 60000) {
+    clearTimeout(overviewTimer);
+    if (!document.hidden) overviewTimer = setTimeout(() => app.refresh(), delay);
+  }
+  function scheduleDetail(delay = 15000) {
+    clearTimeout(detailTimer);
+    if (app.selected && !document.hidden) detailTimer = setTimeout(() => app.refreshDetail(), delay);
+  }
+  app.refresh = () => {
+    if (overview) return overview;
+    const generation = app.generation;
+    clearTimeout(overviewTimer);
+    app.status("loading", "Refreshing…");
+    const run = (async () => {
+      try {
+        const [war, maps] = await Promise.all([
+          request("/worldconquest/war"), request("/worldconquest/maps")
+        ]);
+        if (!current(generation)) return;
+        if (!war || typeof war !== "object" || Array.isArray(war) || !Array.isArray(maps)) {
+          responses.delete(shard + "/worldconquest/war");
+          responses.delete(shard + "/worldconquest/maps");
+          throw new Error("Invalid WarAPI data");
+        }
+        if (app.war && (app.war.warId !== war.warId || app.war.warNumber !== war.warNumber)) {
+          // A new war invalidates in-flight detail requests as well as static data.
+          app.switchShard(shard);
+          return;
+        }
+        app.war = war;
+        app.maps = maps.filter(name => typeof name === "string" && !/^HomeRegion[CW]$/i.test(name));
+        const available = new Set(app.maps);
+        for (const name of app.regions.keys()) if (!available.has(name)) app.regions.delete(name);
+        if (app.selected && !available.has(app.selected)) app.closeRegion();
+        app.updateSummary();
+        const results = await Promise.all(app.maps.map(name => loadRegion(name, generation)));
+        if (!current(generation)) return;
+        app.revision++;
+        app.updateSummary();
+        app.updateMenus();
+        app.updateDetail();
+        app.render.request();
+        const failed = results.filter(ok => !ok).length;
+        app.status(failed ? "error" : "online", failed ? "Partial data · " + failed + " regions" : "Live");
+        app.text("lastRefresh", (failed ? "Checked " : "Updated ") + new Date().toLocaleTimeString());
+      } catch (error) {
+        if (current(generation)) app.status("error", "API error · retrying");
+      }
+    })();
+    overview = run;
+    run.finally(() => {
+      if (overview === run) overview = null;
+      if (current(generation)) scheduleOverview();
+    });
+    return run;
+  };
+  app.refreshDetail = () => {
+    if (!app.selected) return Promise.resolve();
+    if (detail?.name === app.selected) return detail.promise;
+    const name = app.selected, generation = app.generation, selection = app.selection;
+    clearTimeout(detailTimer);
+    const promise = (async () => {
+      const complete = await loadRegion(name, generation);
+      if (!current(generation) || selection !== app.selection) return;
+      app.revision++;
+      app.updateSummary();
+      app.updateMenus();
+      app.updateDetail(complete ? null : "Partial data · retrying");
+      app.render.request();
+    })();
+    const record = { name, promise };
+    detail = record;
+    promise.finally(() => {
+      if (detail === record) detail = null;
+      if (current(generation) && selection === app.selection) scheduleDetail();
+    });
+    return promise;
+  };
+  app.openRegion = name => {
+    if (!app.maps.includes(name)) return;
+    app.closeRegion();
+    app.selected = name;
+    const selection = app.selection;
+    app.ui.detailPanel.classList.remove("hidden");
+    app.text("detailTitle", app.layout.byName.get(name)?.name || name.replace(/Hex$/, ""));
+    app.text("detailSubtitle", name);
+    app.text("detailLoading", "Loading local map…");
+    app.ui.detailLoading.style.display = "block";
+    app.updateDetail();
+    app.updateMenus();
+    app.render.request();
+    app.assets.detail(name).then(image => {
+      if (selection !== app.selection) { image?.close?.(); return; }
+      app.detailImage = image;
+      app.ui.detailLoading.style.display = image ? "none" : "block";
+      if (!image) app.text("detailLoading", "Local map unavailable");
+      app.render.request("detail");
+    });
+    app.refreshDetail();
+  };
+  app.closeRegion = () => {
+    clearTimeout(detailTimer);
+    app.selection++;
+    app.selected = null;
+    app.detailImage?.close?.();
+    app.detailImage = null;
+    app.ui.detailPanel.classList.add("hidden");
+    app.ui.mapTooltip.classList.add("hidden");
+    app.render?.releaseDetail();
+    app.render?.request("world");
+  };
+  app.switchShard = value => {
+    if (!endpoints[value]) return;
+    app.controller.abort();
+    app.generation++;
+    app.controller = new AbortController();
+    shard = value;
+    clearTimeout(overviewTimer);
+    app.closeRegion();
+    overview = null;
+    detail = null;
+    responses.clear();
+    pending.clear();
+    app.regions.clear();
+    app.maps = [];
+    app.war = null;
+    app.revision++;
+    app.updateSummary();
+    app.updateMenus();
+    app.render.request();
+    app.refresh();
+  };
+  app.visibilityChanged = () => {
+    clearTimeout(overviewTimer);
+    clearTimeout(detailTimer);
+    if (!document.hidden) {
+      app.render.request();
+      app.refresh();
+      if (app.selected) app.refreshDetail();
+    }
+  };
+  return app;
+})();

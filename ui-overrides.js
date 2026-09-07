@@ -1,107 +1,63 @@
-refreshAll = async function() {
-  setStatus("loading", "Refreshing…");
-
-  try {
-    const [war, maps] = await Promise.all([
-      apiFetch("/worldconquest/war"),
-      apiFetch("/worldconquest/maps")
-    ]);
-
-    state.war = war;
-    state.maps = maps.filter(name => !/^HomeRegion[CW]$/i.test(name));
-    await refreshOverviewData();
-    setStatus("online", "Live");
-  } catch (error) {
-    console.error(error);
-    setStatus("error", "API error");
-  }
-};
-
-const baseUpdateSummaryForWorldStats = updateSummary;
-updateSummary = function() {
-  baseUpdateSummaryForWorldStats();
-
-  const war = state.war || {};
-  let wardenVp = 0;
-  let colonialVp = 0;
-  let scorched = 0;
-  let wardenCasualties = 0;
-  let colonialCasualties = 0;
-
-  for (const data of state.dynamic.values()) {
-    for (const item of data.mapItems || []) {
-      if ((item.flags & FLAGS.VICTORY_BASE) === 0) {
-        continue;
-      }
-      if (item.teamId === "WARDENS") {
-        wardenVp++;
-      } else if (item.teamId === "COLONIALS") {
-        colonialVp++;
-      }
-      if ((item.flags & FLAGS.SCORCHED) !== 0) {
-        scorched++;
+/* DOM updates and number formatting are shared by world and detail summaries. */
+"use strict";
+(() => {
+  const app = window.OpenWarMap, formatter = new Intl.NumberFormat();
+  app.number = value => formatter.format(Number(value || 0));
+  app.percent = (value,total) => (total ? value/total*100 : 0).toFixed(1)+"%";
+  app.casualties = report => (report?.wardenCasualties || 0)+(report?.colonialCasualties || 0);
+  app.text = (id,value) => {
+    const element = app.ui[id];
+    if (element && element.textContent !== String(value)) element.textContent = String(value);
+  };
+  app.status = (type,text) => {
+    app.ui.connectionStatus.className = "status-pill is-"+type;
+    app.text("connectionStatus",text);
+  };
+  app.hourly = count => {
+    const war = app.war, start = Number(war?.conquestStartTime || 0);
+    const hours = start ? Math.max(0,(Number(war.conquestEndTime || Date.now())-start)/3600000) : 0;
+    return hours ? app.number(Math.round(count/hours))+"/hr" : "—/hr";
+  };
+  app.updateSummary = () => {
+    const war = app.war;
+    if (!war) {
+      for (const id of ["warNumber","warDuration","wardenVp","colonialVp","wardenCasualties",
+        "colonialCasualties","totalCasualtiesSummary"]) app.text(id,"—");
+      app.text("warPhase","Loading"); app.text("lastRefresh","Updated —");
+      app.ranks = new Map();
+      return;
+    }
+    let warden=0,colonial=0,wardenVp=0,colonialVp=0,scorched=0;
+    const reports = [];
+    for (const region of app.regions.values()) {
+      warden += region.report?.wardenCasualties || 0;
+      colonial += region.report?.colonialCasualties || 0;
+      if (region.report) reports.push(region);
+      for (const item of region.dynamic?.mapItems || []) if (item.flags & 1) {
+        if (item.teamId === "WARDENS") wardenVp++;
+        if (item.teamId === "COLONIALS") colonialVp++;
+        if (item.flags & 16) scorched++;
       }
     }
-  }
-
-  for (const report of state.reports.values()) {
-    wardenCasualties += report.wardenCasualties || 0;
-    colonialCasualties += report.colonialCasualties || 0;
-  }
-
-  const required = Math.max(0, (war.requiredVictoryTowns || 0) - scorched);
-  const totalCasualtiesValue = wardenCasualties + colonialCasualties;
-  const wardenVpPercent = required ? wardenVp / required * 100 : 0;
-  const colonialVpPercent = required ? colonialVp / required * 100 : 0;
-  const wardenCasualtyPercent = totalCasualtiesValue
-    ? wardenCasualties / totalCasualtiesValue * 100
-    : 0;
-  const colonialCasualtyPercent = totalCasualtiesValue
-    ? colonialCasualties / totalCasualtiesValue * 100
-    : 0;
-
-  const startTime = Number(war.conquestStartTime || 0);
-  const endTime = Number(war.conquestEndTime || Date.now());
-  const elapsedHours = startTime && endTime > startTime
-    ? (endTime - startTime) / 3600000
-    : 0;
-  const hourlyCasualties = elapsedHours
-    ? totalCasualtiesValue / elapsedHours
-    : 0;
-
-  els.wardenVp.textContent = `${wardenVp} / ${required || "—"} (${formatPercent(wardenVpPercent)})`;
-  els.colonialVp.textContent = `${colonialVp} / ${required || "—"} (${formatPercent(colonialVpPercent)})`;
-  els.wardenCasualties.textContent = `${formatNumber(wardenCasualties)} (${formatPercent(wardenCasualtyPercent)})`;
-  els.colonialCasualties.textContent = `${formatNumber(colonialCasualties)} (${formatPercent(colonialCasualtyPercent)})`;
-
-  const total = document.getElementById("totalCasualtiesSummary");
-  if (total) {
-    total.textContent = `${formatNumber(totalCasualtiesValue)} (${elapsedHours ? `${formatNumber(Math.round(hourlyCasualties))}/hr` : "—/hr"})`;
-  }
-};
-
-function formatPercent(value) {
-  return `${Number(value || 0).toFixed(1)}%`;
-}
-
-function setupWorldLayerControls() {
-  const controls = document.getElementById("worldLayerControls");
-  if (!controls) {
-    return;
-  }
-
-  controls.querySelectorAll("input[data-world-layer]").forEach(input => {
-    const key = input.dataset.worldLayer;
-    input.checked = key === "casualtyHeatmap"
-      ? window.WORLD_OVERVIEW_LAYERS[key] === true
-      : window.WORLD_OVERVIEW_LAYERS[key] !== false;
-
-    input.addEventListener("change", () => {
-      window.WORLD_OVERVIEW_LAYERS[key] = input.checked;
-      drawWorld();
-    });
-  });
-
+    const total=warden+colonial, required=Math.max(0,(war.requiredVictoryTowns || 0)-scorched);
+    app.text("warNumber", war.warNumber ? "#"+war.warNumber : "—");
+    app.text("wardenVp",wardenVp+" / "+(required || "—")+" ("+app.percent(wardenVp,required)+")");
+    app.text("colonialVp",colonialVp+" / "+(required || "—")+" ("+app.percent(colonialVp,required)+")");
+    app.text("wardenCasualties",app.number(warden)+" ("+app.percent(warden,total)+")");
+    app.text("colonialCasualties",app.number(colonial)+" ("+app.percent(colonial,total)+")");
+    app.text("totalCasualtiesSummary",app.number(total)+" ("+app.hourly(total)+")");
+    app.text("warPhase",war.conquestEndTime ? "Ended "+new Date(war.conquestEndTime).toLocaleString() :
+      war.resistanceStartTime ? "Resistance" : "World Conquest");
+    const elapsed = Math.max(0,Number(war.conquestEndTime || Date.now())-Number(war.conquestStartTime || Date.now()));
+    app.text("warDuration",war.conquestStartTime ?
+      Math.floor(elapsed/86400000)+"d "+Math.floor(elapsed%86400000/3600000)+"h elapsed" : "Awaiting conquest");
+    app.ranks = new Map(reports.map(region => [region.name,{total:reports.length}]));
+    reports.sort((a,b) => app.casualties(b.report)-app.casualties(a.report))
+      .forEach((region,index) => { app.ranks.get(region.name).casualties=index+1; });
+    reports.sort((a,b) => (b.report.totalEnlistments || 0)-(a.report.totalEnlistments || 0))
+      .forEach((region,index) => { app.ranks.get(region.name).enlistments=index+1; });
+  };
+  // Preserve existing embedded CSS verbatim: this rewrite changes JavaScript behavior only.
   const style = document.createElement("style");
   style.textContent = `
     .map-layer-controls {
@@ -199,20 +155,62 @@ function setupWorldLayerControls() {
         max-width: none;
       }
     }
-  `;
+
+
+  .world-icon-layer-menu {
+    margin-top: 2px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(60, 72, 84, 0.72);
+  }
+
+  .world-icon-layer-menu summary {
+    cursor: pointer;
+    color: #c4cdd6;
+    font-weight: 600;
+    user-select: none;
+  }
+
+  .world-icon-layer-list {
+    display: grid;
+    max-height: 260px;
+    gap: 6px;
+    margin-top: 8px;
+    padding-right: 4px;
+    overflow-y: auto;
+  }
+
+  .world-icon-layer-list label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .world-icon-layer-preview {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    place-items: center;
+  }
+
+  .world-icon-layer-preview img {
+    display: block;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .world-icon-layer-enum {
+    color: #aeb8c2;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .world-icon-layer-empty {
+    color: var(--muted);
+    font-size: 11px;
+  }
+`;
   document.head.appendChild(style);
-}
-
-document.addEventListener("DOMContentLoaded", setupWorldLayerControls);
-
-if (document.fonts?.load) {
-  Promise.all([
-    document.fonts.load("400 12px Jost"),
-    document.fonts.load("500 12px Jost"),
-    document.fonts.load("600 12px Jost"),
-    document.fonts.load("700 12px Jost")
-  ]).then(() => {
-    drawWorld();
-    drawRegion();
-  }).catch(() => {});
-}
+})();

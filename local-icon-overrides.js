@@ -1,88 +1,93 @@
-const LOCAL_ICON_FILES = {
-  5: ["Static Base T1", "MapIconStaticBase1.png", "structure"],
-  6: ["Static Base T2", "MapIconStaticBase2.png", "structure"],
-  7: ["Static Base T3", "MapIconStaticBase3.png", "structure"],
-  8: ["Forward Base", "MapIconForwardBase1.png", "structure"],
-  11: ["Hospital", "MapIconHospital.png", "structure"],
-  12: ["Vehicle Factory", "MapIconVehicle.png", "structure"],
-  13: ["Armory", "MapIconArmory.png", "structure"],
-  15: ["Workshop", "MapIconWorkshop.png", "structure"],
-  17: ["Refinery", "MapIconManufacturing.png", "structure"],
-  18: ["Shipyard", "Shipyard.png", "structure"],
-  19: ["Engineering Center", "MapIconTechCenter.png", "structure"],
-  20: ["Salvage Field", "SalvageMapIcon.png", "resource"],
-  21: ["Component Field", "MapIconComponents.png", "resource"],
-  22: ["Fuel Field", "MapIconFuel.png", "resource"],
-  23: ["Sulfur Field", "MapIconSulfur.png", "resource"],
-  27: ["Keep", "MapIconsKeep.png", "structure"],
-  28: ["Observation Tower", "MapIconObservationTower.png", "structure"],
-  29: ["Fort", "MapIconFort.png", "structure"],
-  32: ["Sulfur Mine", "MapIconSulfurMine.png", "resource"],
-  33: ["Storage Facility", "MapIconStorageFacility.png", "structure"],
-  34: ["Factory", "MapIconFactory.png", "structure"],
-  35: ["Garrison Station", "MapIconsFortGarrisonStation.png", "structure"],
-  37: ["Rocket Site", "MapIconRocketSite.png", "structure"],
-  38: ["Salvage Mine", "MapIconScrapMine.png", "resource"],
-  39: ["Construction Yard", "MapIconConstructionYard.png", "structure"],
-  40: ["Component Mine", "MapIconComponentMine.png", "resource"],
-  45: ["Relic Base", "MapIconRelicBase.png", "structure"],
-  46: ["Relic Base", "MapIconRelicBase.png", "structure"],
-  47: ["Relic Base", "MapIconRelicBase.png", "structure"],
-  51: ["Mass Production Factory", "MapIconMassProductionFactory.png", "structure"],
-  52: ["Seaport", "MapIconSeaport.png", "structure"],
-  53: ["Coastal Gun", "MapIconCoastalGun.png", "structure"],
-  54: ["Soul Factory", "MapIconSoulFactory.png", "structure"],
-  56: ["Town Base T1", "MapIconTownBaseTier1.png", "structure"],
-  57: ["Town Base T2", "MapIconTownBaseTier2.png", "structure"],
-  58: ["Town Base T3", "MapIconTownBaseTier3.png", "structure"],
-  59: ["Storm Cannon", "MapIconStormcannon.png", "structure"],
-  60: ["Intel Center", "MapIconIntelcenter.png", "structure"],
-  61: ["Coal Field", "MapIconCoal.png", "resource"],
-  62: ["Oil Field", "MapIconFuel.png", "resource"],
-  70: ["Rocket Target", "MapIconRocketTarget.png", "structure"],
-  71: ["Rocket Ground Zero", "MapIconRocketGroundZero.png", "structure"],
-  72: ["Rocket Site With Rocket", "MapIconRocketSiteWithRocket.png", "structure"],
-  75: ["Facility Mine Oil Rig", "MapIconFacilityMineOilRig.png", "resource"],
-  83: ["Weather Station", "MapIconWeatherStation.png", "structure"],
-  84: ["Mortar House", "MapIconMortarHouse.png", "structure"],
-  88: ["Aircraft Depot", "MapIconAircraftDepot.png", "structure"],
-  89: ["Aircraft Factory", "MapIconAircraftFactory.png", "structure"],
-  91: ["Aircraft Runway T1", "MapIconAircraftRunwayT1.png", "structure"],
-  92: ["Aircraft Runway T2", "MapIconAircraftRunwayT2.png", "structure"],
-  97: ["Anti Air Gun", "MapIconAAGunAI.png", "structure"]
-};
-
-for (const [iconType, data] of Object.entries(LOCAL_ICON_FILES)) {
-  ICONS[iconType] = data;
-}
-
-preloadVisibleIcons = async function(mapName) {
-  const staticData = state.static.get(mapName) || {};
-  const dynamicData = state.dynamic.get(mapName) || {};
-  const types = new Set([
-    ...(staticData.mapItems || []).map(item => item.iconType),
-    ...(dynamicData.mapItems || []).map(item => item.iconType)
-  ]);
-
-  await Promise.all([...types].map(async type => {
-    if (state.iconImages.has(type)) {
-      return;
+/* Bounded asset decoding. Overview keeps small bitmaps, detail keeps one full tile. */
+"use strict";
+(() => {
+  const app = window.OpenWarMap;
+  const tiles = new Map(), icons = new Map(), painted = new Map();
+  const waiting = [];
+  let active = 0, tileRevision = 0, redrawTimer;
+  function enqueue(run) {
+    return new Promise(resolve => {
+      waiting.push({ run, resolve });
+      pump();
+    });
+  }
+  function pump() {
+    while (active < 3 && waiting.length) {
+      const job = waiting.shift();
+      active++;
+      job.run().catch(() => null).then(job.resolve).finally(() => { active--; pump(); });
     }
-
-    const entry = LOCAL_ICON_FILES[type];
-    if (!entry) {
-      state.iconImages.set(type, null);
-      return;
+  }
+  const url = name => "img/Map" +
+    name.replace(/Hex$/i, "").replace(/^DeadLands$/i, "Deadlands") + "Hex.png";
+  async function decode(src, width) {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+    await image.decode();
+    if (!width || image.naturalWidth <= width) return image;
+    const height = Math.max(1, Math.round(image.naturalHeight * width / image.naturalWidth));
+    if (typeof createImageBitmap === "function") {
+      try { return await createImageBitmap(image, { resizeWidth: width, resizeHeight: height, resizeQuality: "high" }); }
+      catch { /* Older engines use a small canvas instead. */ }
     }
-
-    try {
-      const image = new Image();
-      image.src = `icons/${entry[1]}`;
-      await image.decode();
-      state.iconImages.set(type, image);
-    } catch (error) {
-      console.warn(`Could not load local map icon ${type}: ${entry[1]}`, error);
-      state.iconImages.set(type, null);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+    return canvas;
+  }
+  function loadIcon(type) {
+    if (!icons.has(type)) {
+      const file = app.config.icons[type]?.[1];
+      const record = { image: null };
+      icons.set(type, record);
+      record.promise = file ? enqueue(() => decode("icons/" + file, 64)).then(image => {
+        record.image = image;
+        app.render.request();
+        return image;
+      }) : Promise.resolve(null);
     }
-  }));
-};
+    return icons.get(type);
+  }
+  function icon(type, team) {
+    const source = loadIcon(type).image;
+    if (!source || (team !== "WARDENS" && team !== "COLONIALS")) return source;
+    const key = type + ":" + team;
+    if (painted.has(key)) return painted.get(key);
+    const canvas = document.createElement("canvas");
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(source, 0, 0);
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = team === "WARDENS" ? "#245682" : "#516C4B";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(source, 0, 0);
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(source, 0, 0);
+    painted.set(key, canvas);
+    return canvas;
+  }
+  app.assets = {
+    tiles, icon, url,
+    get revision() { return tileRevision; },
+    // Detail decode is not held behind the overview queue.
+    detail: name => decode(url(name), 2048).catch(() => null),
+    async start() {
+      let loaded = 0;
+      await Promise.all(app.layout.tiles.map(tile => enqueue(() => decode(url(tile.mapName), 256)).then(image => {
+        if (image) { tiles.set(tile.mapName, image); loaded++; tileRevision++; }
+        if (!redrawTimer) redrawTimer = setTimeout(() => {
+          redrawTimer = null;
+          app.render.request("world");
+        }, 100);
+        app.text("worldLoading", "Loading world tiles… " + loaded + "/" + app.layout.tiles.length);
+      })));
+      app.ui.worldLoading.style.display = loaded === app.layout.tiles.length ? "none" : "block";
+      if (loaded !== app.layout.tiles.length) app.text("worldLoading", "Some local map tiles are unavailable");
+      app.render.request("world");
+    }
+  };
+})();
