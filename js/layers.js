@@ -53,14 +53,8 @@
   app.setupMenus = () => {
     worldMenu = document.getElementById("worldIconLayerMenu");
     worldList = document.getElementById("worldIconLayerList");
-    detailMenu = document.createElement("details");
-    detailMenu.id = "detailIconLayerMenu";
-    detailMenu.className = "world-icon-layer-menu detail-icon-layer-menu";
-    const summary = document.createElement("summary"); summary.textContent = "Map Icons";
-    detailList = document.createElement("div"); detailList.id = "detailIconLayerList";
-    detailList.className = "world-icon-layer-list";
-    detailMenu.append(summary,detailList);
-    app.ui.detailUpdated.before(detailMenu);
+    detailMenu = document.getElementById("detailIconLayerMenu");
+    detailList = document.getElementById("detailIconLayerList");
     for (const [menu,isDetail] of [[worldMenu,false],[detailMenu,true]]) {
       menu.addEventListener("toggle", app.updateMenus);
       menu.addEventListener("change", event => {

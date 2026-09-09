@@ -66,7 +66,7 @@
       ctx.drawImage(image, x-size/2, y-size/2, size, size);
       ctx.globalAlpha = 1;
     } else {
-      ctx.font = "600 " + Math.max(4.5, size*0.5) + "px Jost, sans-serif";
+      ctx.font = "600 " + Math.max(4.5, size*0.5) + "px system-ui, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.85)";
       ctx.strokeText(String(item.iconType), x, y);
@@ -126,7 +126,7 @@
     for (const tile of app.layout.tiles) {
       if (app.layers.regionNames) {
         const p = project(tile);
-        ctx.font = "400 11.5px Jost, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = "400 11.5px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.lineWidth = 0.5; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
         ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
       }

@@ -1,156 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OpenWarMap</title>
-  <meta name="description" content="OpenWarMap live Foxhole World Conquest tracker powered by the official WarAPI.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="font-overrides.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080c10">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Follow the Foxhole war: live territory, victory points, casualties, and detailed regional maps from WarAPI.">
+  <title>OpenWarMap — Foxhole war tracker</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script src="js/app.js" defer></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/assets.js" defer></script>
+  <script src="js/geometry.js" defer></script>
+  <script src="js/renderer.js" defer></script>
+  <script src="js/detail.js" defer></script>
+  <script src="js/layers.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/main.js" defer></script>
 </head>
 <body>
-  <main class="app-shell">
-    <section class="content-grid">
-      <article class="panel world-panel">
-        <div class="world-viewport">
-          <div class="world-control-stack">
-            <div class="map-layer-controls world-status-controls">
-              <div class="world-status-summary">
-                <span>
-                  <small>War</small>
-                  <strong id="warNumber">—</strong>
-                </span>
-                <span>
-                  <small id="warPhase">Loading</small>
-                  <strong id="warDuration">—</strong>
-                </span>
-              </div>
-              <div class="world-status-actions">
-                <label class="field world-shard-field">
-                  <span>Shard</span>
-                  <select id="shardSelect">
-                    <option value="1">Live-1</option>
-                    <option value="2">Live-2</option>
-                    <option value="3">Live-3</option>
-                    <option value="dev">Devbranch</option>
-                  </select>
-                </label>
-                <button id="refreshButton" class="button" type="button">Refresh</button>
-                <div id="connectionStatus" class="status-pill is-loading">Connecting…</div>
-              </div>
-            </div>
+  <a class="skip-link" href="#regionSelect">Choose a region</a>
+  <main id="main" tabindex="-1">
+    <h1 class="sr-only">OpenWarMap</h1>
+    <noscript><p class="canvas-message">Enable JavaScript to view live maps.</p></noscript>
+    <div class="session-controls overlay" aria-label="War and connection controls">
+      <div class="war-summary"><span>War <strong id="warNumber">—</strong></span><span><small id="warPhase">Loading</small><strong id="warDuration">—</strong></span></div>
+      <div class="control-row">
+        <select id="shardSelect" aria-label="Shard"><option value="1">Live-1</option><option value="2">Live-2</option><option value="3">Live-3</option><option value="dev">Devbranch</option></select>
+        <button id="refreshButton" type="button">Refresh</button>
+        <span id="connectionStatus" class="status-pill is-loading" role="status">Connecting…</span>
+      </div>
+      <label class="sr-only" for="regionSelect">Go to region</label>
+      <select id="regionSelect" disabled><option value="">Loading regions…</option></select>
+    </div>
 
-            <div id="worldLayerControls" class="map-layer-controls world-layer-controls">
-              <details class="world-icon-layer-menu layer-group">
+    <section id="worldPanel" aria-label="World overview">
+      <div class="world-map-area">
+        <canvas id="worldCanvas" role="img" aria-label="Foxhole world map. Select a hex to open its region.">Use the region menu to open a detailed map.</canvas>
+        <div id="worldLoading" class="canvas-message" role="status">Loading world map tiles…</div>
+      </div>
+      <div class="map-tools world-tools overlay">
+        <div class="control-row"><details class="world-icon-layer-menu" data-layer-menu>
                 <summary>Layers</summary>
                 <div class="world-icon-layer-list">
-                  <label>
-                    <input type="checkbox" data-world-layer="regionNames">
-                    <span>Region Names</span>
-                  </label>
-                  <label>
-                    <input type="checkbox" data-world-layer="victoryBases" checked>
-                    <span>Victory Bases</span>
-                  </label>
-                  <label>
-                    <input type="checkbox" data-world-layer="otherBases" checked>
-                    <span>Other Bases</span>
-                  </label>
-                  <label>
-                    <input type="checkbox" data-world-layer="casualtyHeatmap">
-                    <span>Casualty Heatmap</span>
-                  </label>
-                  <label>
-                    <input type="checkbox" data-world-layer="territoryOwnership" checked>
-                    <span>Sub-regions</span>
-                  </label>
-                  <label>
-                    <input type="checkbox" data-world-layer="frontline" checked>
-                    <span>Frontline</span>
-                  </label>
+                  <label><input type="checkbox" data-world-layer="regionNames"> Region names</label>
+                  <label><input type="checkbox" data-world-layer="victoryBases" checked> Victory bases</label>
+                  <label><input type="checkbox" data-world-layer="otherBases" checked> Other bases</label>
+                  <label><input type="checkbox" data-world-layer="casualtyHeatmap"> Casualty heatmap</label>
+                  <label><input type="checkbox" data-world-layer="territoryOwnership" checked> Sub-regions</label>
+                  <label><input type="checkbox" data-world-layer="frontline" checked> Frontline</label>
                 </div>
-              </details>
-              <details id="worldIconLayerMenu" class="world-icon-layer-menu">
-                <summary>Map Icons</summary>
-                <div id="worldIconLayerList" class="world-icon-layer-list">
-                  <span class="world-icon-layer-empty">Loading map icons…</span>
+              </details><details id="worldIconLayerMenu" class="world-icon-layer-menu" data-layer-menu>
+                <summary>Map icons</summary>
+                <div id="worldIconLayerList" class="world-icon-layer-list"><span class="world-icon-layer-empty">No map icons available yet.</span></div>
+              </details></div>
+        <span id="lastRefresh" class="muted">Updated —</span>
+      </div>
+      <aside class="stats overlay" aria-label="War statistics"><dl class="world-war-stats">
+            <div class="stat-card warden-text"><dt>Warden victory points</dt><dd id="wardenVp">—</dd></div>
+            <div class="stat-card colonial-text"><dt>Colonial victory points</dt><dd id="colonialVp">—</dd></div>
+            <div class="stat-card warden-text"><dt>Warden casualties</dt><dd id="wardenCasualties">—</dd></div>
+            <div class="stat-card colonial-text"><dt>Colonial casualties</dt><dd id="colonialCasualties">—</dd></div>
+            <div class="stat-card total-stat"><dt>Total casualties</dt><dd id="totalCasualtiesSummary">—</dd></div>
+          </dl></aside>
+    </section>
+
+    <section id="detailPanel" class="hidden" hidden aria-labelledby="detailTitle">
+      <div class="detail-map-area">
+        <canvas id="detailCanvas" role="img" aria-label="Selected region map">Regional casualties and enlistments are shown in the statistics overlay.</canvas>
+        <div id="detailLoading" class="canvas-message" role="status">Loading region…</div>
+        <div id="mapTooltip" class="map-tooltip hidden" role="tooltip"></div>
+      </div>
+      <div class="map-tools detail-tools overlay">
+        <button id="closeDetail" type="button">← World overview</button>
+        <h2 id="detailTitle" tabindex="-1">Region</h2>
+        <div class="control-row"><details class="world-icon-layer-menu" data-layer-menu>
+                <summary>Layers</summary>
+                <div class="world-icon-layer-list">
+                  <label><input id="showLabels" type="checkbox"> Locations</label>
+                  <label><input id="showResources" type="checkbox" checked> Resources</label>
+                  <label><input id="showStructures" type="checkbox" checked> Structures</label>
+                  <label><input id="showSubregions" type="checkbox" checked> Sub-regions</label>
+                  <label><input id="showFrontline" type="checkbox"> Frontline</label>
+                  <label><input id="showNeutral" type="checkbox" checked> Neutral markers</label>
                 </div>
-              </details>
-              <span id="lastRefresh" class="muted">Updated —</span>
-            </div>
-          </div>
-
-          <div class="world-map-area">
-            <canvas id="worldCanvas"></canvas>
-            <div id="worldLoading" class="canvas-message">Loading world map tiles…</div>
-          </div>
-
-          <div class="world-war-stats" aria-live="polite">
-            <span class="warden-text"><small>Warden VP</small><strong id="wardenVp">—</strong></span>
-            <span class="colonial-text"><small>Colonial VP</small><strong id="colonialVp">—</strong></span>
-            <span class="warden-text"><small>Warden Casualties</small><strong id="wardenCasualties">—</strong></span>
-            <span class="colonial-text"><small>Colonial Casualties</small><strong id="colonialCasualties">—</strong></span>
-            <span><small>Total Casualties</small><strong id="totalCasualtiesSummary">—</strong></span>
-          </div>
-
-          <section id="detailPanel" class="detail-panel hidden">
-            <div class="detail-viewport">
-              <div class="detail-toolbar map-layer-controls">
-                <button id="closeDetail" class="detail-back-button" type="button">← World overview</button>
-                <div class="detail-map-heading">
-                  <strong id="detailTitle">Region</strong>
-                  <small id="detailSubtitle">Live public map data</small>
-                </div>
-                <details class="world-icon-layer-menu layer-group">
-                  <summary>Layers</summary>
-                  <div class="world-icon-layer-list">
-                    <label><input id="showLabels" type="checkbox"> Locations</label>
-                    <label><input id="showResources" type="checkbox" checked> Resources</label>
-                    <label><input id="showStructures" type="checkbox" checked> Structures</label>
-                    <label><input id="showSubregions" type="checkbox" checked> Sub-regions</label>
-                    <label><input id="showFrontline" type="checkbox"> Frontline</label>
-                  </div>
-                </details>
-                <span id="detailUpdated" class="muted">Updated —</span>
-              </div>
-
-              <div class="detail-map-area">
-                <canvas id="detailCanvas"></canvas>
-                <div id="detailLoading" class="canvas-message">Loading region…</div>
-                <div id="mapTooltip" class="map-tooltip hidden"></div>
-              </div>
-
-              <div class="detail-stats" aria-live="polite">
-                <div class="warden-text"><span>Warden Casualties</span><strong id="detailWardenCas">—</strong></div>
-                <div class="colonial-text"><span>Colonial Casualties</span><strong id="detailColonialCas">—</strong></div>
-                <div><span>Total Casualties</span><strong id="detailTotalCas">—</strong></div>
-                <div><span>Enlistments</span><strong id="detailEnlistments">—</strong></div>
-              </div>
-              <input id="showNeutral" type="checkbox" checked hidden>
-            </div>
-          </section>
-        </div>
-      </article>
+              </details><details id="detailIconLayerMenu" class="world-icon-layer-menu" data-layer-menu>
+                <summary>Map icons</summary>
+                <div id="detailIconLayerList" class="world-icon-layer-list"><span class="world-icon-layer-empty">Select a region to view its icons.</span></div>
+              </details></div>
+        <span id="detailUpdated" class="muted">Updated —</span>
+      </div>
+      <aside class="stats overlay" aria-label="Region statistics"><dl class="detail-stats">
+            <div class="stat-card warden-text"><dt>Warden casualties</dt><dd id="detailWardenCas">—</dd></div>
+            <div class="stat-card colonial-text"><dt>Colonial casualties</dt><dd id="detailColonialCas">—</dd></div>
+            <div class="stat-card total-stat"><dt>Total casualties</dt><dd id="detailTotalCas">—</dd></div>
+            <div class="stat-card"><dt>Enlistments</dt><dd id="detailEnlistments">—</dd></div>
+          </dl></aside>
     </section>
   </main>
-
-  <footer class="legal-footer">
-    <span>Data is provided by WarAPI. Foxhole® is a registered trademark of Siege Camp (Clapfoot Inc.). All trademarks and registered trademarks present here are proprietary to Siege Camp.</span>
-    <span>All files, data, and materials provided here are for educational purposes only.</span>
-  </footer>
-
-  <script src="script.js"></script>
-  <script src="local-icon-overrides.js"></script>
-  <script src="map-config.js"></script>
-  <script src="world-layout.js"></script>
-  <script src="world-render-overrides.js"></script>
-  <script src="world-overlay.js"></script>
-  <script src="detail-overrides.js"></script>
-  <script src="world-icon-layers.js"></script>
-  <script src="ui-overrides.js"></script>
-  <script src="interaction-overrides.js"></script>
+  <footer>WarAPI · Foxhole® and game artwork © Siege Camp. Independent educational project.</footer>
 </body>
 </html>

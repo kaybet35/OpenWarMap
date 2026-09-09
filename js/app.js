@@ -1,4 +1,4 @@
-/* OpenWarMap application and data pipeline. Classic scripts preserve index.html. */
+/* OpenWarMap state, request scheduling, and view lifecycle. */
 "use strict";
 window.OpenWarMap = (() => {
   const app = {
@@ -194,12 +194,18 @@ window.OpenWarMap = (() => {
   };
   app.openRegion = name => {
     if (!app.maps.includes(name)) return;
+    const source = document.activeElement;
     app.closeRegion();
+    app.returnFocus = source;
     app.selected = name;
     const selection = app.selection;
+    app.ui.worldPanel.hidden = true;
+    app.ui.detailPanel.hidden = false;
     app.ui.detailPanel.classList.remove("hidden");
+    app.syncView?.();
     app.text("detailTitle", app.layout.byName.get(name)?.name || name.replace(/Hex$/, ""));
-    app.text("detailSubtitle", name);
+    app.ui.detailCanvas.setAttribute?.("aria-label", "Map of " + app.ui.detailTitle.textContent);
+    app.ui.detailTitle.focus?.({ preventScroll: true });
     app.text("detailLoading", "Loading local map…");
     app.ui.detailLoading.style.display = "block";
     app.updateDetail();
@@ -215,12 +221,17 @@ window.OpenWarMap = (() => {
     app.refreshDetail();
   };
   app.closeRegion = () => {
+    const restoreFocus = app.selected && app.ui.detailPanel.contains?.(document.activeElement);
     clearTimeout(detailTimer);
     app.selection++;
     app.selected = null;
     app.detailImage?.close?.();
     app.detailImage = null;
+    app.ui.detailPanel.hidden = true;
     app.ui.detailPanel.classList.add("hidden");
+    app.ui.worldPanel.hidden = false;
+    app.syncView?.();
+    if (restoreFocus) (app.returnFocus?.isConnected ? app.returnFocus : app.ui.regionSelect).focus?.();
     app.ui.mapTooltip.classList.add("hidden");
     app.render?.releaseDetail();
     app.render?.request("world");

@@ -94,6 +94,8 @@
     }
     document.addEventListener("scroll",hide,{capture:true,passive:true});
     app.ui.closeDetail.addEventListener("click",hide);
+    app.ui.regionSelect.addEventListener("change",hide);
+    app.ui.shardSelect.addEventListener("change",hide);
   }
   function init() {
     document.querySelectorAll("[id]").forEach(element => { app.ui[element.id]=element; });
@@ -101,8 +103,24 @@
     app.ui.shardSelect.addEventListener("change",() => app.switchShard(app.ui.shardSelect.value));
     app.ui.refreshButton.addEventListener("click",() => app.refresh());
     app.ui.closeDetail.addEventListener("click",app.closeRegion);
-    document.addEventListener("keydown",event => {
-      if (event.key==="Escape" && app.selected) app.closeRegion();
+    const menus = [...document.querySelectorAll("[data-layer-menu]")];
+    for (const menu of menus) menu.addEventListener("toggle", () => {
+      if (menu.open) for (const other of menus) if (other !== menu) other.open = false;
+    });
+    document.addEventListener("click", event => {
+      for (const menu of menus) if (menu.open && !menu.contains(event.target)) menu.open = false;
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      const menu = menus.find(menu => menu.open);
+      if (menu) {
+        menu.open = false;
+        menu.querySelector("summary").focus();
+      } else if (app.selected) app.closeRegion();
+    });
+    app.ui.regionSelect.addEventListener("change", () => {
+      if (app.ui.regionSelect.value) app.openRegion(app.ui.regionSelect.value);
+      else app.closeRegion();
     });
     for (const input of document.querySelectorAll("[data-world-layer]")) {
       const key=input.dataset.worldLayer;
