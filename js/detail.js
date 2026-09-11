@@ -28,7 +28,7 @@
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)"; ctx.lineWidth = 0.5;
       for (const label of region.labels) {
-        ctx.font = "400 " + ((label.mapMarkerType === "Major" ? 18.5 : 12.5)*scale) + "px Jost, Arial, sans-serif";
+        ctx.font = "400 " + ((label.mapMarkerType === "Major" ? 18 : 12)*scale) + "px Jost, system-ui, sans-serif";
         ctx.strokeText(label.text, label.x*width, label.y*height);
         ctx.fillText(label.text, label.x*width, label.y*height);
       }
