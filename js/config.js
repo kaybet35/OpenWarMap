@@ -3,12 +3,12 @@
 (() => {
   const app = window.OpenWarMap;
   app.config.icons = {
-  5:  ["Static Base T1", "MapIconStaticBase1.png", "structure"],                       // StaticBase1
-  6:  ["Static Base T2", "MapIconStaticBase2.png", "structure"],                       // StaticBase2
-  7:  ["Static Base T3", "MapIconStaticBase3.png", "structure"],                       // StaticBase3
+  5:  ["Static Base Tier 1", "MapIconStaticBase1.png", "structure"],                   // StaticBase1
+  6:  ["Static Base Tier 2", "MapIconStaticBase2.png", "structure"],                   // StaticBase2
+  7:  ["Static Base Tier 3", "MapIconStaticBase3.png", "structure"],                   // StaticBase3
   8:  ["Forward Base", "MapIconForwardBase1.png", "structure"],                        // ForwardBase1
   11: ["Hospital", "MapIconHospital.png", "structure"],                                // Hospital
-  12: ["Vehicle Factory", "MapIconVehicle.png", "structure"],                          // VehicleFactory
+  12: ["Garage", "MapIconVehicle.png", "structure"],                                   // VehicleFactory
   13: ["Armory", "MapIconArmory.png", "structure"],                                    // Armory
   15: ["Workshop", "MapIconWorkshop.png", "structure"],                                // Workshop
   17: ["Refinery", "MapIconManufacturing.png", "structure"],                           // Refinery
@@ -22,38 +22,38 @@
   28: ["Observation Tower", "MapIconObservationTower.png", "structure"],               // ObservationTower
   29: ["Fort", "MapIconFort.png", "structure"],                                        // Fort
   32: ["Sulfur Mine", "MapIconSulfurMine.png", "resource"],                            // SulfurMine
-  33: ["Storage Facility", "MapIconStorageFacility.png", "structure"],                 // StorageFacility
+  33: ["Storage Depot", "MapIconStorageFacility.png", "structure"],                    // StorageFacility
   34: ["Factory", "MapIconFactory.png", "structure"],                                  // Factory
   35: ["Safehouse", "MapIconSafehouse.png", "structure"],                              // GarrisonStation
-  37: ["Rocket Site", "MapIconRocketSite.png", "structure"],                           // RocketSite
+  37: ["Rocket Platform", "MapIconRocketSite.png", "structure"],                       // RocketSite
   38: ["Salvage Mine", "MapIconScrapMine.png", "resource"],                            // SalvageMine
   39: ["Construction Yard", "MapIconConstructionYard.png", "structure"],               // ConstructionYard
   40: ["Component Mine", "MapIconComponentMine.png", "resource"],                      // ComponentMine
-  45: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase1
-  46: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase2
-  47: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase3
+  45: ["Relic Base Tier 1", "MapIconRelicBase.png", "structure"],                      // RelicBase1
+  46: ["Relic Base Tier 2", "MapIconRelicBase.png", "structure"],                      // RelicBase2
+  47: ["Relic Base Tier 3", "MapIconRelicBase.png", "structure"],                      // RelicBase3
   51: ["Mass Production Factory", "MapIconMassProductionFactory.png", "structure"],    // MassProductionFactory
   52: ["Seaport", "MapIconSeaport.png", "structure"],                                  // Seaport
   53: ["Coastal Gun", "MapIconCoastalGun.png", "structure"],                           // CoastalGun
-  54: ["Soul Factory", "MapIconSoulFactory.png", "structure"],                         // SoulFactory
-  56: ["Town Base T1", "MapIconTownBaseTier1.png", "structure"],                       // TownBase1
-  57: ["Town Base T2", "MapIconTownBaseTier2.png", "structure"],                       // TownBase2
-  58: ["Town Base T3", "MapIconTownBaseTier3.png", "structure"],                       // TownBase3
+  54: ["Font of Balor", "MapIconSoulFactory.png", "structure"],                        // SoulFactory
+  56: ["Town Base Tier 1", "MapIconTownBaseTier1.png", "structure"],                   // TownBase1
+  57: ["Town Base Tier 2", "MapIconTownBaseTier2.png", "structure"],                   // TownBase2
+  58: ["Town Base Tier 3", "MapIconTownBaseTier3.png", "structure"],                   // TownBase3
   59: ["Storm Cannon", "MapIconStormcannon.png", "structure"],                         // LRArtillery
-  60: ["Intel Center", "MapIconIntelcenter.png", "structure"],                         // IntelCenter
+  60: ["Intelligence Center", "MapIconIntelcenter.png", "structure"],                  // IntelCenter
   61: ["Coal Field", "MapIconCoal.png", "resource"],                                   // CoalField
   62: ["Oil Field", "MapIconFuel.png", "resource"],                                    // OilField
   70: ["Rocket Target", "MapIconRocketTarget.png", "structure"],                       // RocketTarget
   71: ["Rocket Ground Zero", "MapIconRocketGroundZero.png", "structure"],              // RocketGroundZero
-  72: ["Rocket Site With Rocket", "MapIconRocketSiteWithRocket.png", "structure"],     // RocketSiteWithRocket
-  75: ["Facility Mine Oil Rig", "MapIconFacilityMineOilRig.png", "resource"],          // FacilityMineOilRig
+  72: ["Rocket Platform With Rocket", "MapIconRocketSiteWithRocket.png", "structure"], // RocketSiteWithRocket
+  75: ["Offshore Platform", "MapIconFacilityMineOilRig.png", "resource"],              // FacilityMineOilRig
   83: ["Weather Station", "MapIconWeatherStation.png", "structure"],                   // WeatherStation
-  84: ["Mortar House", "MapIconMortarHouse.png", "structure"],                         // MortarHouse
+  84: ["Emplacement House", "MapIconMortarHouse.png", "structure"],                    // MortarHouse
   88: ["Aircraft Depot", "MapIconAircraftDepot.png", "structure"],                     // AircraftDepot
-  89: ["Aircraft Factory", "MapIconAircraftFactory.png", "structure"],                 // AircraftFactory
-  91: ["Aircraft Runway T1", "MapIconAircraftRunwayT1.png", "structure"],              // AircraftRunwayT1
-  92: ["Aircraft Runway T2", "MapIconAircraftRunwayT2.png", "structure"],              // AircraftRunwayT2
-  97: ["Anti Air Gun", "MapIconAAGunAI.png", "structure"]                              // AntiAirGun
+  89: ["Aircraft Hangar", "MapIconAircraftFactory.png", "structure"],                  // AircraftFactory
+  91: ["Aircraft Runway Tier 1", "MapIconAircraftRunwayT1.png", "structure"],          // AircraftRunwayT1
+  92: ["Aircraft Runway Tier 2", "MapIconAircraftRunwayT2.png", "structure"],          // AircraftRunwayT2
+  97: ["Anti-Air Gun", "MapIconAAGunAI.png", "structure"]                              // AntiAirGun
 };
   app.config.enums = {
   0: "None",
