@@ -172,7 +172,9 @@ window.OpenWarMap = (() => {
   };
   app.refreshDetail = () => {
     if (!app.selected) return Promise.resolve();
-    if (detail?.name === app.selected) return detail.promise;
+    // Share refresh callbacks only within the same visit; request() still shares transports.
+    if (detail?.name === app.selected && detail.selection === app.selection &&
+        detail.generation === app.generation) return detail.promise;
     const name = app.selected, generation = app.generation, selection = app.selection;
     clearTimeout(detailTimer);
     const promise = (async () => {
@@ -184,7 +186,7 @@ window.OpenWarMap = (() => {
       app.updateDetail(complete ? null : "Partial data · retrying");
       app.render.request();
     })();
-    const record = { name, promise };
+    const record = { name, selection, generation, promise };
     detail = record;
     promise.finally(() => {
       if (detail === record) detail = null;
