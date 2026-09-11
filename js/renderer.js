@@ -149,7 +149,7 @@
     for (const tile of app.layout.tiles) {
       if (app.layers.regionNames) {
         const p = project(tile);
-        ctx.font = "400 " + (15*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = "400 " + (12.5*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.lineWidth = 0.5*symbolScale; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
         ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
       }
