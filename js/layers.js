@@ -4,7 +4,6 @@
   const app = window.OpenWarMap;
   let worldMenu, detailMenu, worldList, detailList;
   const signatures = new WeakMap();
-  app.worldHiddenBases = new Set();
   const category = type => app.config.resourceTypes.has(type) ? 'resources' : 'structures';
   function enabled(type, detail, worldTypes) {
     if (detail) return !app.hiddenIcons.has(type) &&
@@ -16,19 +15,12 @@
       if (checked) app.hiddenIcons.delete(type); else app.hiddenIcons.add(type);
       if (checked) (category(type) === 'resources' ? app.ui.showResources : app.ui.showStructures).checked = true;
     } else {
-      if (checked) { app.worldIcons.add(type); app.worldHiddenBases.delete(type); }
-      else { app.worldIcons.delete(type); app.worldHiddenBases.add(type); }
+      if (checked) app.worldIcons.add(type);
+      else app.worldIcons.delete(type);
     }
   }
   function sync(list, detail) {
-    const worldTypes = new Set();
-    if (!detail) for (const region of app.regions.values()) for (const item of region.items) {
-      const type = item.iconType;
-      const visible = (item.flags & 1) || app.config.baseTypes.has(type)
-        ? !app.worldHiddenBases.has(type) && ((item.flags & 1) ? app.layers.victoryBases : app.layers.otherBases)
-        : app.worldIcons.has(type);
-      if (visible) worldTypes.add(type);
-    }
+    const worldTypes = app.worldIcons;
     for (const group of list.querySelectorAll('[data-icon-group]')) {
       const inputs = [...group.querySelectorAll('input[data-icon-type]')];
       for (const input of inputs) input.checked = enabled(Number(input.value), detail, worldTypes);
@@ -86,7 +78,7 @@
     if (worldMenu?.open) {
       const types = new Set();
       for (const region of app.regions.values()) for (const item of region.items) {
-        types.add(item.iconType);
+        if (!(item.flags & 1) && !app.config.baseTypes.has(item.iconType)) types.add(item.iconType);
       }
       fill(worldList,types,false);
     }
@@ -108,13 +100,6 @@
         const types = input.dataset.iconCategory
           ? [...input.closest('[data-icon-group]').querySelectorAll('input[data-icon-type]')].map(child => Number(child.value))
           : [Number(input.value)];
-        // Enabling structures also opens the existing base visibility gates.
-        if (!isDetail && input.checked && types.some(type => category(type) === 'structures')) {
-          app.layers.victoryBases = true; app.layers.otherBases = true;
-          for (const key of ['victoryBases', 'otherBases']) {
-            document.querySelector(`[data-world-layer="${key}"]`).checked = true;
-          }
-        }
         for (const type of types) setEnabled(type, input.checked, isDetail);
         sync(list, isDetail);
         app.render.request(isDetail ? "detail" : "world");
