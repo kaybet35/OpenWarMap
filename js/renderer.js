@@ -127,12 +127,6 @@
     }
     if (app.layers.frontline) lines(ctx, app.geometry.worldFrontlines(entries), project, "rgba(220,62,62,0.95)", 1.4);
     for (const tile of app.layout.tiles) {
-      if (app.layers.regionNames) {
-        const p = project(tile);
-        ctx.font = "400 " + (15*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.lineWidth = 0.5*symbolScale; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
-        ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
-      }
       const region = app.regions.get(tile.mapName);
       if (!region) continue;
       for (const item of region.items) {
@@ -149,6 +143,15 @@
           ctx.strokeStyle = item.flags & 16 ? "#d7ae58" : "rgba(8,10,13,0.9)";
           ctx.lineWidth = (victory?1.5:0.9)*symbolScale; ctx.stroke();
         } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9*symbolScale);
+      }
+    }
+    // Labels are the final pass, above markers from every region.
+    for (const tile of app.layout.tiles) {
+      if (app.layers.regionNames) {
+        const p = project(tile);
+        ctx.font = "400 " + (15*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.lineWidth = 0.5*symbolScale; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
+        ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
       }
     }
   }

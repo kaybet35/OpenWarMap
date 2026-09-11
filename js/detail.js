@@ -24,15 +24,6 @@
       app.render.territories(ctx, app.geometry.get(region,tile), project,
         app.ui.showSubregions.checked, app.ui.showFrontline.checked, 2*scale);
     }
-    if (app.ui.showLabels.checked) {
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)"; ctx.lineWidth = 0.5;
-      for (const label of region.labels) {
-        ctx.font = "400 " + ((label.mapMarkerType === "Major" ? 18 : 12)*scale) + "px Jost, system-ui, sans-serif";
-        ctx.strokeText(label.text, label.x*width, label.y*height);
-        ctx.fillText(label.text, label.x*width, label.y*height);
-      }
-    }
     for (const item of region.items) {
       if (app.hiddenIcons.has(item.iconType)) continue;
       const resource = app.config.resourceTypes.has(item.iconType);
@@ -41,6 +32,16 @@
       const x = item.x*width, y = item.y*height, size = 20*scale;
       app.render.marker(ctx,item,x,y,size);
       app.detailHits.push({ x,y,r:Math.max(6,size*0.72),item });
+    }
+    // Location labels stay above all regional icons and territory layers.
+    if (app.ui.showLabels.checked) {
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)"; ctx.lineWidth = 0.5;
+      for (const label of region.labels) {
+        ctx.font = "400 " + ((label.mapMarkerType === "Major" ? 18 : 12)*scale) + "px Jost, system-ui, sans-serif";
+        ctx.strokeText(label.text, label.x*width, label.y*height);
+        ctx.fillText(label.text, label.x*width, label.y*height);
+      }
     }
   };
   app.updateDetail = error => {
