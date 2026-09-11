@@ -26,8 +26,6 @@
     }
     for (const item of region.items) {
       if (app.hiddenIcons.has(item.iconType)) continue;
-      const resource = app.config.resourceTypes.has(item.iconType);
-      if (!(resource ? app.ui.showResources.checked : app.ui.showStructures.checked)) continue;
       const x = item.x*width, y = item.y*height, size = 20*scale;
       app.render.marker(ctx,item,x,y,size);
       app.detailHits.push({ x,y,r:Math.max(6,size*0.72),item });

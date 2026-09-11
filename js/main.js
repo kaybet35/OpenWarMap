@@ -127,7 +127,7 @@
       input.checked=app.layers[key]===true;
       input.addEventListener("change",() => { app.layers[key]=input.checked; app.render.request("world"); });
     }
-    for (const id of ["showLabels","showResources","showStructures","showSubregions","showFrontline"]) {
+    for (const id of ["showLabels","showSubregions","showFrontline"]) {
       app.ui[id].addEventListener("change",() => app.render.request("detail"));
     }
     setupPointers();

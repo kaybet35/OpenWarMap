@@ -6,14 +6,12 @@
   const signatures = new WeakMap();
   const category = type => app.config.resourceTypes.has(type) ? 'resources' : 'structures';
   function enabled(type, detail, worldTypes) {
-    if (detail) return !app.hiddenIcons.has(type) &&
-      (category(type) === 'resources' ? app.ui.showResources.checked : app.ui.showStructures.checked);
+    if (detail) return !app.hiddenIcons.has(type);
     return worldTypes.has(type);
   }
   function setEnabled(type, checked, detail) {
     if (detail) {
       if (checked) app.hiddenIcons.delete(type); else app.hiddenIcons.add(type);
-      if (checked) (category(type) === 'resources' ? app.ui.showResources : app.ui.showStructures).checked = true;
     } else {
       if (checked) app.worldIcons.add(type);
       else app.worldIcons.delete(type);
