@@ -4,8 +4,8 @@ window.OpenWarMap = (() => {
   const app = {
     config: {}, ui: {}, regions: new Map(), maps: [], war: null,
     selected: null, generation: 0, selection: 0, controller: new AbortController(),
-    layers: { regionNames: false, victoryBases: true, otherBases: true,
-      casualtyHeatmap: false, territoryOwnership: true, frontline: true },
+    layers: { regionNames: true, victoryBases: true, otherBases: true,
+      casualtyHeatmap: false, territoryOwnership: true, frontline: false },
     worldIcons: new Set(), hiddenIcons: new Set(), revision: 0
   };
   const endpoints = {
