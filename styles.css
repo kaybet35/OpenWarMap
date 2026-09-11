@@ -119,3 +119,8 @@ footer { flex-shrink: 0; padding: 3px 8px max(3px, env(safe-area-inset-bottom));
   .detail-map-area { inset: 0; }
   .world-icon-layer-list { max-height: 35dvh; }
 }
+
+.world-icon-layer-list .icon-group-heading { color: var(--accent-strong); background: var(--field); }
+.world-icon-layer-list [data-icon-group] + [data-icon-group] { margin-top: 6px; }
+footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+footer a:hover, footer a:focus-visible { color: var(--accent-strong); }

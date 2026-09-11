@@ -133,6 +133,7 @@
         const victory = !!(item.flags & 1), base = app.config.baseTypes.has(item.iconType);
         const p = project({ x: tile.bounds.x+item.x*tile.bounds.width, y: tile.bounds.y+item.y*tile.bounds.height });
         if (victory || base) {
+          if (app.worldHiddenBases?.has(item.iconType)) continue;
           if (!(victory ? app.layers.victoryBases : app.layers.otherBases)) continue;
           if (!app.layers.simplifiedMode) {
             marker(ctx,item,p.x,p.y,(victory ? 12 : 9)*symbolScale);
