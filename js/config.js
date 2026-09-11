@@ -29,9 +29,9 @@
   38: ["Salvage Mine", "MapIconScrapMine.png", "resource"],                            // SalvageMine
   39: ["Construction Yard", "MapIconConstructionYard.png", "structure"],               // ConstructionYard
   40: ["Component Mine", "MapIconComponentMine.png", "resource"],                      // ComponentMine
-  45: ["Relic Base Tier 1", "MapIconRelicBase.png", "structure"],                      // RelicBase1
-  46: ["Relic Base Tier 2", "MapIconRelicBase.png", "structure"],                      // RelicBase2
-  47: ["Relic Base Tier 3", "MapIconRelicBase.png", "structure"],                      // RelicBase3
+  45: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase1
+  46: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase2
+  47: ["Relic Base", "MapIconRelicBase.png", "structure"],                             // RelicBase3
   51: ["Mass Production Factory", "MapIconMassProductionFactory.png", "structure"],    // MassProductionFactory
   52: ["Seaport", "MapIconSeaport.png", "structure"],                                  // Seaport
   53: ["Coastal Gun", "MapIconCoastalGun.png", "structure"],                           // CoastalGun
