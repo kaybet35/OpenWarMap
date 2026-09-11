@@ -66,9 +66,9 @@
       ctx.drawImage(image, x-size/2, y-size/2, size, size);
       ctx.globalAlpha = 1;
     } else {
-      ctx.font = "600 " + Math.max(4.5, size*0.5) + "px system-ui, sans-serif";
+      ctx.font = "600 " + (size*0.5) + "px system-ui, sans-serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.85)";
+      ctx.lineWidth = size*2/9; ctx.strokeStyle = "rgba(0,0,0,0.85)";
       ctx.strokeText(String(item.iconType), x, y);
       ctx.fillStyle = app.config.colors[item.teamId] || app.config.colors.NONE;
       ctx.fillText(String(item.iconType), x, y);
@@ -79,6 +79,9 @@
     if (!rect.width || !rect.height) return;
     const ctx = size(canvas, rect.width, rect.height);
     const scale = Math.min(rect.width/app.layout.width, rect.height/app.layout.height);
+    // Preserve the existing sizes at a 1280px-wide world map; scale all
+    // overview symbols and labels with the terrain on smaller/larger views.
+    const symbolScale = scale * app.layout.width / 1280;
     const offsetX = (rect.width-app.layout.width*scale)/2, offsetY = (rect.height-app.layout.height*scale)/2;
     const project = p => ({ x: offsetX+p.x*scale, y: offsetY+p.y*scale });
     app.worldView = { scale, offsetX, offsetY };
@@ -126,8 +129,8 @@
     for (const tile of app.layout.tiles) {
       if (app.layers.regionNames) {
         const p = project(tile);
-        ctx.font = "400 15px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.lineWidth = 0.5; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
+        ctx.font = "400 " + (15*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.lineWidth = 0.5*symbolScale; ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
         ctx.strokeText(tile.name,p.x,p.y); ctx.fillText(tile.name,p.x,p.y);
       }
       const region = app.regions.get(tile.mapName);
@@ -137,11 +140,15 @@
         const p = project({ x: tile.bounds.x+item.x*tile.bounds.width, y: tile.bounds.y+item.y*tile.bounds.height });
         if (victory || base) {
           if (!(victory ? app.layers.victoryBases : app.layers.otherBases)) continue;
-          ctx.beginPath(); ctx.arc(p.x,p.y,victory?4.5:2.5,0,Math.PI*2);
+          if (!app.layers.simplifiedMode) {
+            marker(ctx,item,p.x,p.y,(victory ? 12 : 9)*symbolScale);
+            continue;
+          }
+          ctx.beginPath(); ctx.arc(p.x,p.y,(victory?4.5:2.5)*symbolScale,0,Math.PI*2);
           ctx.fillStyle = app.config.colors[item.teamId] || app.config.colors.NONE; ctx.fill();
           ctx.strokeStyle = item.flags & 16 ? "#d7ae58" : "rgba(8,10,13,0.9)";
-          ctx.lineWidth = victory?1.5:0.9; ctx.stroke();
-        } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9);
+          ctx.lineWidth = (victory?1.5:0.9)*symbolScale; ctx.stroke();
+        } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9*symbolScale);
       }
     }
   }
