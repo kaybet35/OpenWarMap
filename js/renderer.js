@@ -81,6 +81,7 @@
     const view = app.camera.view('world', rect.width, rect.height);
     const { scale, offsetX, offsetY } = view;
     const symbolScale = scale * app.layout.width / 1280;
+    const iconScale = symbolScale * 0.5;
     const project = p => ({ x: offsetX+p.x*scale, y: offsetY+p.y*scale });
     app.worldView = view;
     const visible = app.layout.tiles.filter(tile => {
@@ -142,14 +143,14 @@
         if (victory || base) {
           if (!(victory ? app.layers.victoryBases : app.layers.otherBases)) continue;
           if (!app.layers.simplifiedMode) {
-            marker(ctx,item,p.x,p.y,(victory ? 12 : 9)*symbolScale);
+            marker(ctx,item,p.x,p.y,9*iconScale);
             continue;
           }
           ctx.beginPath(); ctx.arc(p.x,p.y,(victory?4.5:2.5)*symbolScale,0,Math.PI*2);
           ctx.fillStyle = app.config.colors[item.teamId] || app.config.colors.NONE; ctx.fill();
           ctx.strokeStyle = item.flags & 16 ? "#d7ae58" : "rgba(8,10,13,0.9)";
           ctx.lineWidth = (victory?1.5:0.9)*symbolScale; ctx.stroke();
-        } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9*symbolScale);
+        } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9*iconScale);
       }
     }
     // Location text uses the same cached WarAPI labels as the regional view.
