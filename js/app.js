@@ -200,6 +200,8 @@ window.OpenWarMap = (() => {
     app.closeRegion();
     app.returnFocus = source;
     app.selected = name;
+    app.camera?.reset("detail", false);
+    app.assets.releaseWorld?.();
     const selection = app.selection;
     app.ui.worldPanel.hidden = true;
     app.ui.detailPanel.hidden = false;
@@ -223,6 +225,7 @@ window.OpenWarMap = (() => {
     app.refreshDetail();
   };
   app.closeRegion = () => {
+    app.camera?.cancel();
     const restoreFocus = app.selected && app.ui.detailPanel.contains?.(document.activeElement);
     clearTimeout(detailTimer);
     app.selection++;

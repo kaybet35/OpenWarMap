@@ -57,7 +57,7 @@
       }
       lines(ctx, geometry.edges.filter(edge => edge.cells.length > 1), project, "rgba(140,125,107,0.349)", borderWidth);
     }
-    if (frontline) lines(ctx, geometry.edges.filter(app.geometry.opposing), project, "rgba(220,62,62,0.95)", 1.4);
+    if (frontline) lines(ctx, geometry.edges.filter(app.geometry.opposing), project, "rgba(220,62,62,0.95)", 0.7*borderWidth);
   }
   function marker(ctx, item, x, y, size) {
     const image = app.assets.icon(item.iconType, item.teamId);
@@ -78,20 +78,24 @@
     const canvas = app.ui.worldCanvas, rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const ctx = size(canvas, rect.width, rect.height);
-    const scale = Math.min(rect.width/app.layout.width, rect.height/app.layout.height);
-    // Preserve the existing sizes at a 1280px-wide world map; scale all
-    // overview symbols and labels with the terrain on smaller/larger views.
+    const view = app.camera.view('world', rect.width, rect.height);
+    const { scale, offsetX, offsetY } = view;
     const symbolScale = scale * app.layout.width / 1280;
-    const offsetX = (rect.width-app.layout.width*scale)/2, offsetY = (rect.height-app.layout.height*scale)/2;
     const project = p => ({ x: offsetX+p.x*scale, y: offsetY+p.y*scale });
-    app.worldView = { scale, offsetX, offsetY };
-    const key = canvas.width + ":" + canvas.height + ":" + app.assets.revision;
+    app.worldView = view;
+    const visible = app.layout.tiles.filter(tile => {
+      const p = project(tile.bounds), margin = 30 * symbolScale;
+      return p.x <= rect.width + margin && p.y <= rect.height + margin &&
+        p.x + tile.bounds.width*scale >= -margin && p.y + tile.bounds.height*scale >= -margin;
+    });
+    app.assets.prepareWorld?.(visible, 1028 * scale * canvas.width / rect.width);
+    const key = [canvas.width, canvas.height, rect.width, rect.height, scale, offsetX, offsetY, app.assets.revision].join(':');
     if (key !== terrainKey) {
       terrain.width = canvas.width; terrain.height = canvas.height;
       const tc = terrain.getContext("2d");
       tc.setTransform(canvas.width/rect.width, 0, 0, canvas.height/rect.height, 0, 0);
-      for (const tile of app.layout.tiles) {
-        const image = app.assets.tiles.get(tile.mapName);
+      for (const tile of visible) {
+        const image = app.assets.terrain?.(tile.mapName) || app.assets.tiles.get(tile.mapName);
         if (!image) continue;
         tc.save();
         polygon(tc, tile.polygon, project);
@@ -107,7 +111,11 @@
     let maxCasualties = 0;
     if (app.layers.casualtyHeatmap) for (const region of app.regions.values()) maxCasualties = Math.max(maxCasualties, app.casualties(region.report));
     const entries = [];
-    for (const tile of app.layout.tiles) {
+    if (app.layers.territoryOwnership || app.layers.frontline) for (const tile of app.layout.tiles) {
+      const region = app.regions.get(tile.mapName);
+      if (region) entries.push({ tile, region, geometry: app.geometry.get(region, tile) });
+    }
+    for (const tile of visible) {
       const region = app.regions.get(tile.mapName);
       if (maxCasualties && region) {
         const count = app.casualties(region.report);
@@ -119,14 +127,13 @@
       }
       if (region && (app.layers.territoryOwnership || app.layers.frontline)) {
         const geometry = app.geometry.get(region, tile);
-        entries.push({ tile, region, geometry });
-        territories(ctx, geometry, project, app.layers.territoryOwnership, false);
+        territories(ctx, geometry, project, app.layers.territoryOwnership, false, symbolScale);
       }
       polygon(ctx, tile.polygon, project);
-      ctx.strokeStyle = "rgba(140,125,107,0.349)"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = "rgba(140,125,107,0.349)"; ctx.lineWidth = symbolScale; ctx.stroke();
     }
-    if (app.layers.frontline) lines(ctx, app.geometry.worldFrontlines(entries), project, "rgba(220,62,62,0.95)", 1.4);
-    for (const tile of app.layout.tiles) {
+    if (app.layers.frontline) lines(ctx, app.geometry.worldFrontlines(entries), project, "rgba(220,62,62,0.95)", 1.4*symbolScale);
+    for (const tile of visible) {
       const region = app.regions.get(tile.mapName);
       if (!region) continue;
       for (const item of region.items) {
@@ -146,7 +153,7 @@
       }
     }
     // Labels are the final pass, above markers from every region.
-    for (const tile of app.layout.tiles) {
+    for (const tile of visible) {
       if (app.layers.regionNames) {
         const p = project(tile);
         ctx.font = "400 " + (12.5*symbolScale) + "px Jost, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";

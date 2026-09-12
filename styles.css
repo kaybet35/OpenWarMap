@@ -124,3 +124,11 @@ footer { flex-shrink: 0; padding: 3px 8px max(3px, env(safe-area-inset-bottom));
 .world-icon-layer-list [data-icon-group] + [data-icon-group] { margin-top: 6px; }
 footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 footer a:hover, footer a:focus-visible { color: var(--accent-strong); }
+
+/* Gesture handling is restricted to map canvases; menus retain native scrolling. */
+.world-map-area canvas, .detail-map-area canvas { touch-action: none; cursor: grab; }
+.world-map-area canvas.is-panning, .detail-map-area canvas.is-panning { cursor: grabbing !important; }
+.detail-map-area canvas { aspect-ratio: auto; }
+@media (max-width: 600px) { .detail-map-area { inset: 280px 0 100px; } }
+@media (pointer: coarse) and (max-width: 600px) { .detail-map-area { inset: 300px 0 100px; } }
+@media (max-height: 520px) { .detail-map-area { inset: 0; } }

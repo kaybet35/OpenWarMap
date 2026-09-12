@@ -6,17 +6,18 @@
     if (!app.selected) return;
     const canvas = app.ui.detailCanvas;
     const rect = canvas.parentElement.getBoundingClientRect();
-    const scale = Math.min(rect.width / 1024, rect.height / 888);
-    if (!(scale > 0)) return;
+    if (!(rect.width > 0 && rect.height > 0)) return;
+    const view = app.camera.view('detail', rect.width, rect.height);
+    const { scale, offsetX, offsetY } = view;
     const width = 1024 * scale, height = 888 * scale;
-    // Explicit CSS dimensions decouple intrinsic backing size from flex layout.
-    canvas.style.width = width + "px";
-    canvas.style.height = height + "px";
-    const ctx = app.render.size(canvas, width, height);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = app.render.size(canvas, rect.width, rect.height);
+    ctx.save(); ctx.translate(offsetX, offsetY);
     app.detailHits = [];
     if (app.detailImage) ctx.drawImage(app.detailImage, 0, 0, width, height);
     const region = app.regions.get(app.selected);
-    if (!region) return;
+    if (!region) { ctx.restore(); return; }
     const tile = app.layout.byName.get(app.selected);
     if (tile && (app.ui.showSubregions.checked || app.ui.showFrontline.checked)) {
       const project = p => ({ x: (p.x-tile.bounds.x)/tile.bounds.width*width,
@@ -28,18 +29,19 @@
       if (app.hiddenIcons.has(item.iconType)) continue;
       const x = item.x*width, y = item.y*height, size = 20*scale;
       app.render.marker(ctx,item,x,y,size);
-      app.detailHits.push({ x,y,r:Math.max(6,size*0.72),item });
+      app.detailHits.push({ x:x+offsetX,y:y+offsetY,r:Math.max(6,size*0.72),item });
     }
     // Location labels stay above all regional icons and territory layers.
     if (app.ui.showLabels.checked) {
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)"; ctx.lineWidth = 0.5;
+      ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)"; ctx.lineWidth = 0.5*scale;
       for (const label of region.labels) {
         ctx.font = "400 " + ((label.mapMarkerType === "Major" ? 18 : 12)*scale) + "px Jost, system-ui, sans-serif";
         ctx.strokeText(label.text, label.x*width, label.y*height);
         ctx.fillText(label.text, label.x*width, label.y*height);
       }
     }
+    ctx.restore();
   };
   app.updateDetail = error => {
     if (!app.selected) return;

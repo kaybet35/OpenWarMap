@@ -6,7 +6,7 @@
     const worldTooltip = document.createElement("div");
     worldTooltip.className = "map-tooltip hidden";
     app.ui.worldCanvas.parentElement.appendChild(worldTooltip);
-    app.ui.worldCanvas.style.cursor = "pointer";
+    app.ui.worldCanvas.style.cursor = "grab";
     let pointerFrame = 0, latest = null, contentKey = "";
     function hide() {
       latest = null;
@@ -75,13 +75,14 @@
     }
     for (const [canvas,detail] of [[app.ui.worldCanvas,false],[app.ui.detailCanvas,true]]) {
       canvas.addEventListener("pointermove",event => {
-        if (event.pointerType==="touch") return;
+        if (event.pointerType==="touch" || app.camera.interacting(canvas)) return;
         latest={ event,detail };
         if (!pointerFrame) pointerFrame=requestAnimationFrame(() => {
           pointerFrame=0;
           if (latest) show(latest.event,latest.detail);
         });
       }, { passive:true });
+      canvas.addEventListener("mapgesture",hide);
       canvas.addEventListener("pointerleave",hide,{passive:true});
       canvas.addEventListener("pointercancel",hide,{passive:true});
       canvas.addEventListener("click",event => {
@@ -130,6 +131,7 @@
     for (const id of ["showLabels","showSubregions","showFrontline"]) {
       app.ui[id].addEventListener("change",() => app.render.request("detail"));
     }
+    app.camera.setup();
     setupPointers();
     const resize=() => app.render.request();
     if (typeof ResizeObserver==="function") {

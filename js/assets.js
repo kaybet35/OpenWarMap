@@ -70,8 +70,61 @@
     painted.set(key, canvas);
     return canvas;
   }
+  // Only visible overview regions receive sharper images. A 32 MiB budget
+  // includes both the displayed bitmaps and their replacements while decoding.
+  const sharper = new Map(), pendingSharp = new Set(), failedSharp = new Map();
+  let wanted = new Map(), sharpTimer, wantedKey = '';
+  const sharpBudget = 32 * 1024 * 1024;
+  function trimSharp() {
+    for (const [name, record] of sharper) {
+      if (!wanted.has(name) || record.width > wanted.get(name)) {
+        record.image.close?.(); sharper.delete(name); tileRevision++;
+      }
+    }
+  }
+  function requestSharp() {
+    trimSharp();
+    for (const [name, width] of wanted) {
+      if ((sharper.get(name)?.width || 256) >= width || pendingSharp.has(name) ||
+          Date.now() - (failedSharp.get(name) || 0) < 30000) continue;
+      pendingSharp.add(name);
+      enqueue(async () => {
+        if (wanted.get(name) !== width) return null;
+        return decode(url(name), width);
+      }).then(image => {
+        pendingSharp.delete(name);
+        if (image && wanted.get(name) === width) {
+          sharper.get(name)?.image.close?.();
+          sharper.set(name, {image, width}); tileRevision++;
+        } else {
+          image?.close?.();
+          if (wanted.get(name) === width) failedSharp.set(name, Date.now());
+        }
+        app.render.request('world');
+        // A gesture may have changed the requested level during this decode.
+        if (wanted.get(name) && wanted.get(name) !== width) scheduleSharp();
+      });
+    }
+  }
+  function scheduleSharp() {
+    clearTimeout(sharpTimer);
+    sharpTimer = setTimeout(requestSharp, 120);
+  }
+  function prepareWorld(visible, pixels) {
+    const perTile = Math.sqrt(sharpBudget / (2 * Math.max(1, visible.length) * 4 * 888 / 1024));
+    const desired = pixels > 512 ? 1024 : pixels > 256 ? 512 : 256;
+    const budgetWidth = perTile >= 1024 ? 1024 : perTile >= 512 ? 512 : 256;
+    const width = Math.min(desired, budgetWidth);
+    const next = new Map(width > 256 ? visible.map(tile => [tile.mapName, width]) : []);
+    const key = [...next].map(([name,w]) => name + ':' + w).join('|');
+    if (key === wantedKey) return;
+    wantedKey = key; wanted = next;
+    trimSharp(); scheduleSharp();
+  }
   app.assets = {
-    tiles, icon, url,
+    tiles, icon, url, prepareWorld,
+    terrain: name => sharper.get(name)?.image || tiles.get(name),
+    releaseWorld() { wanted = new Map(); wantedKey = ''; clearTimeout(sharpTimer); trimSharp(); },
     get revision() { return tileRevision; },
     // Detail decode is not held behind the overview queue.
     detail: name => decode(url(name), 2048).catch(() => null),
