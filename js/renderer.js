@@ -152,6 +152,24 @@
         } else if (app.worldIcons.has(item.iconType)) marker(ctx,item,p.x,p.y,9*symbolScale);
       }
     }
+    // Location text uses the same cached WarAPI labels as the regional view.
+    // Draw above all icons, with region names retaining the highest priority.
+    if (app.layers.majorLocations || app.layers.minorLocations) {
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 0.1*symbolScale;
+      ctx.strokeStyle = "rgb(192,181,149)"; ctx.fillStyle = "rgb(71,87,85)";
+      for (const tile of visible) {
+        const region = app.regions.get(tile.mapName);
+        for (const label of region?.labels || []) {
+          const major = label.mapMarkerType === "Major";
+          if (major ? !app.layers.majorLocations : label.mapMarkerType !== "Minor" || !app.layers.minorLocations) continue;
+          const p = project({ x: tile.bounds.x + label.x*tile.bounds.width,
+            y: tile.bounds.y + label.y*tile.bounds.height });
+          ctx.font = "400 " + ((major ? 2.25 : 1.5)*symbolScale) + "px Jost, system-ui, sans-serif";
+          ctx.strokeText(label.text,p.x,p.y); ctx.fillText(label.text,p.x,p.y);
+        }
+      }
+    }
     // Labels are the final pass, above markers from every region.
     for (const tile of visible) {
       if (app.layers.regionNames) {
