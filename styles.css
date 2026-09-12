@@ -98,7 +98,6 @@ footer { flex-shrink: 0; padding: 3px 8px max(3px, env(safe-area-inset-bottom));
   .stats dl > div:nth-child(even) { text-align: right; }
   .world-war-stats > div:last-child { grid-column: 1 / -1; text-align: center; }
   .stats dd { font-size: 11px; }
-  .detail-map-area { inset: 224px 0 100px; }
   .world-icon-layer-menu:last-child .world-icon-layer-list { left: 0; right: auto; }
 }
 @media (pointer: coarse) {
@@ -107,16 +106,11 @@ footer { flex-shrink: 0; padding: 3px 8px max(3px, env(safe-area-inset-bottom));
   button, select, .world-icon-layer-menu > summary { min-height: 32px; }
   .map-tools { top: 144px; }
 }
-@media (pointer: coarse) and (max-width: 600px) {
-  .detail-map-area { inset: 240px 0 100px; }
-}
 @media (max-height: 520px) and (min-width: 601px) {
   .session-controls { width: 220px; }
   .stats { max-width: 220px; }
-  .detail-map-area { inset: 0; }
 }
 @media (max-height: 520px) and (max-width: 600px) {
-  .detail-map-area { inset: 0; }
   .world-icon-layer-list { max-height: 35dvh; }
 }
 
@@ -129,6 +123,3 @@ footer a:hover, footer a:focus-visible { color: var(--accent-strong); }
 .world-map-area canvas, .detail-map-area canvas { touch-action: none; cursor: grab; }
 .world-map-area canvas.is-panning, .detail-map-area canvas.is-panning { cursor: grabbing !important; }
 .detail-map-area canvas { aspect-ratio: auto; }
-@media (max-width: 600px) { .detail-map-area { inset: 280px 0 100px; } }
-@media (pointer: coarse) and (max-width: 600px) { .detail-map-area { inset: 300px 0 100px; } }
-@media (max-height: 520px) { .detail-map-area { inset: 0; } }
