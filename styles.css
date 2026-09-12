@@ -123,3 +123,17 @@ footer a:hover, footer a:focus-visible { color: var(--accent-strong); }
 .world-map-area canvas, .detail-map-area canvas { touch-action: none; cursor: grab; }
 .world-map-area canvas.is-panning, .detail-map-area canvas.is-panning { cursor: grabbing !important; }
 .detail-map-area canvas { aspect-ratio: auto; }
+
+/* Small screens keep controls available without covering the map by default. */
+.mobile-panel-toggle { display: none; text-align: left; }
+.collapsible-panel-content { display: contents; }
+.mobile-panel-toggle::before { content: "\25B8  "; color: var(--muted); }
+.mobile-panel-toggle[aria-expanded="true"]::before { content: "\25BE  "; }
+@media (max-width: 600px) {
+  .session-controls { width: 178px; }
+  .session-controls:has(> .mobile-panel-toggle[aria-expanded="true"]) { width: 238px; }
+  .mobile-panel-toggle { display: block; }
+  .collapsible-panel-content { display: grid; gap: inherit; }
+  .mobile-panel-toggle[aria-expanded="false"] + .collapsible-panel-content { display: none; }
+  .map-tools { top: var(--mobile-tools-top, 64px); }
+}

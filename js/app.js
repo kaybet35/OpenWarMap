@@ -209,7 +209,7 @@ window.OpenWarMap = (() => {
     app.syncView?.();
     app.text("detailTitle", app.layout.byName.get(name)?.name || name.replace(/Hex$/, ""));
     app.ui.detailCanvas.setAttribute?.("aria-label", "Map of " + app.ui.detailTitle.textContent);
-    app.ui.detailTitle.focus?.({ preventScroll: true });
+    (app.ui.detailTitle.getClientRects?.().length === 0 ? app.ui.closeDetail : app.ui.detailTitle).focus?.({ preventScroll: true });
     app.text("detailLoading", "Loading local map…");
     app.ui.detailLoading.style.display = "block";
     app.updateDetail();

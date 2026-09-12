@@ -2,6 +2,28 @@
 "use strict";
 (() => {
   const app = window.OpenWarMap;
+  function setupCollapsibleControls() {
+    const session = document.querySelector('.session-controls');
+    const toggles = document.querySelectorAll('.mobile-panel-toggle');
+    const updatePosition = () => document.getElementById('main').style.setProperty('--mobile-tools-top', (session.offsetTop + session.offsetHeight + 8) + 'px');
+    for (const toggle of toggles) {
+      toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+        toggle.setAttribute('aria-expanded', String(expanded));
+        if (!expanded) {
+          for (const menu of document.getElementById(toggle.getAttribute('aria-controls')).querySelectorAll('details[open]')) menu.open = false;
+        }
+        updatePosition();
+      });
+    }
+    document.querySelector('.skip-link').addEventListener('click', () => {
+      session.querySelector('.mobile-panel-toggle').setAttribute('aria-expanded', 'true');
+      updatePosition();
+    });
+    if (typeof ResizeObserver === 'function') new ResizeObserver(updatePosition).observe(session);
+    else window.addEventListener('resize', updatePosition, {passive:true});
+    updatePosition();
+  }
   function setupPointers() {
     const worldTooltip = document.createElement("div");
     worldTooltip.className = "map-tooltip hidden";
@@ -131,6 +153,7 @@
     for (const id of ["showLabels","showSubregions","showFrontline"]) {
       app.ui[id].addEventListener("change",() => app.render.request("detail"));
     }
+    setupCollapsibleControls();
     app.camera.setup();
     setupPointers();
     const resize=() => app.render.request();
